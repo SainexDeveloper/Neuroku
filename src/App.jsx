@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Nav from './components/Nav.jsx'
 import HomePage from './pages/HomePage.jsx'
 import GamePage from './pages/GamePage.jsx'
 import DailyPage from './pages/DailyPage.jsx'
 import StatsPage from './pages/StatsPage.jsx'
 import AuthModal from './components/AuthModal.jsx'
+import { useRequireAuth } from './components/useRequireAuth.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 import LeaderboardPage from './pages/LeaderboardPage.jsx'
@@ -44,14 +45,6 @@ export default function App() {
   const T = unlockable ? { ...baseTheme, ...unlockable } : baseTheme
   const { user } = useAuth()
 
-  const guard = (action) => {
-    if (!user) {
-      setShowAuth(true)
-      notify('Please login first', 'info')
-      return false
-    }
-    return true
-  }
 
   useEffect(() => {
     localStorage.setItem('neuroku_theme', themeName)
@@ -60,6 +53,24 @@ export default function App() {
   // ── Page routing ───────────────────────────────────────────────────────────
   const [page, setPage] = useState('home')
   const [showAuth, setShowAuth] = useState(false)
+  const [pendingAction, setPendingAction] = useState(null)
+
+  const requireAuth = useCallback((action) => {
+    if (!user) {
+      setPendingAction(() => action)
+      setShowAuth(true)
+      return
+    }
+  
+    action()
+  }, [user])
+
+  useEffect(() => {
+    if (user && pendingAction) {
+      pendingAction()
+      setPendingAction(null)
+    }
+  }, [user, pendingAction])
 
   // ── Game state ─────────────────────────────────────────────────────────────
   const [gameState, setGameState] = useState(() => {
@@ -89,42 +100,36 @@ export default function App() {
   }, [notification?.id])
 
   // ── Start a new free game ──────────────────────────────────────────────────
-  const startGame = useCallback((difficulty = 'medium') => {
-    if (!guard()) return
+  const startGame = useCallback((difficulty) => {
+    requireAuth(() => {
+      const { puzzle, solution } = generateSudoku(difficulty)
   
-    clearGameState()
-  
-    const { puzzle, solution } = generateSudoku(difficulty)
-  
-    const gs = makeGameState(puzzle, solution, difficulty)
-  
-    setGameState(gs)
-    setShowVictory(false)
-    setPage('play')
-  
-    saveGameState(gs)
-  }, [user])
+      const gs = makeGameState(puzzle, solution, difficulty)
+      setGameState(gs)
+      setPage('play')
+    })
+  }, [requireAuth])
 
   // ── Start daily challenge ──────────────────────────────────────────────────
   const startDaily = useCallback(() => {
-    if (!guard()) return
+    requireAuth(() => {
+      const today = new Date().toISOString().slice(0, 10)
   
-    const today = new Date().toISOString().slice(0, 10)
+      if (!dailyState) {
+        const { puzzle, solution, difficulty } = getDailyPuzzle()
   
-    if (!dailyState) {
-      const { puzzle, solution, difficulty } = getDailyPuzzle()
+        const gs = {
+          ...makeGameState(puzzle, solution, difficulty),
+          date: today
+        }
   
-      const gs = {
-        ...makeGameState(puzzle, solution, difficulty),
-        date: today
+        setDailyState(gs)
+        saveDailyState(gs)
       }
   
-      setDailyState(gs)
-      saveDailyState(gs)
-    }
-  
-    setPage('daily')
-  }, [user, dailyState])
+      setPage('daily')
+    })
+  }, [requireAuth, dailyState])
 
   const handleDailyComplete = useCallback(() => {
     setStats(s => {
@@ -230,11 +235,12 @@ export default function App() {
             <LeaderboardPage T={T} />
           )}
 
-          <AuthModal
-            open={showAuth}
-            onClose={() => setShowAuth(false)}
-            T={T}
-          />
+          {showAuth && (
+            <AuthModal
+              T={T}
+              onClose={() => setShowAuth(false)}
+            />
+          )}
 
           <footer style={{
             marginTop: 70,
