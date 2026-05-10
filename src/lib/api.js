@@ -1,61 +1,30 @@
 import { supabase } from './supabase'
 
-// ─────────────────────────────────────────────────────────────
-// AUTH (Supabase вместо PHP)
-// ─────────────────────────────────────────────────────────────
+// ─── AUTH ─────────────────────────────
+
+export async function loginWithGoogle() {
+  return supabase.auth.signInWithOAuth({
+    provider: 'google'
+  })
+}
 
 export async function loginWithEmail(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({
+  return supabase.auth.signInWithPassword({
     email,
-    password,
+    password
   })
-
-  if (error) throw error
-  return data.user
 }
 
-export async function registerWithEmail(email, password, username) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { username }
-    }
-  })
-
-  if (error) throw error
-  return data.user
+export async function logout() {
+  return supabase.auth.signOut()
 }
 
-// Google login (если включишь OAuth в Supabase)
-export async function loginWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-  })
-
-  if (error) throw error
-  return data
+export async function getUser() {
+  const { data } = await supabase.auth.getUser()
+  return data?.user ?? null
 }
 
-// ─────────────────────────────────────────────────────────────
-// DAILY CHALLENGE
-// ─────────────────────────────────────────────────────────────
-
-export async function fetchDailyChallenge(date) {
-  const { data, error } = await supabase
-    .from('daily_challenges')
-    .select('*')
-    .eq('challenge_date', date)
-    .single()
-
-  if (error) throw error
-
-  return data
-}
-
-// ─────────────────────────────────────────────────────────────
-// PUZZLE GENERATION (DB + fallback)
-// ─────────────────────────────────────────────────────────────
+// ─── PUZZLES ──────────────────────────
 
 export async function fetchPuzzle(difficulty) {
   const { data, error } = await supabase
@@ -63,142 +32,72 @@ export async function fetchPuzzle(difficulty) {
     .select('*')
     .eq('difficulty', difficulty)
     .limit(1)
-    .maybeSingle()
-
-  if (!error && data) return data
-
-  // fallback local generator
-  const { generateSudoku } = await import('./sudoku.js')
-  return generateSudoku(difficulty)
-}
-
-// ─────────────────────────────────────────────────────────────
-// SCORES
-// ─────────────────────────────────────────────────────────────
-
-export async function saveScore({
-  userId,
-  puzzleId,
-  dailyChallengeId,
-  completionTime,
-  mistakes,
-  hintsUsed = 0,
-  difficulty,
-  isDaily = false
-}) {
-  const { data, error } = await supabase
-    .from('scores')
-    .insert({
-      user_id: userId,
-      puzzle_id: puzzleId ?? null,
-      daily_challenge_id: dailyChallengeId ?? null,
-      completion_time: completionTime,
-      mistakes,
-      hints_used: hintsUsed,
-      difficulty,
-      is_daily: isDaily,
-    })
 
   if (error) throw error
-  return data
+  return data?.[0]
 }
 
-// ─────────────────────────────────────────────────────────────
-// LEADERBOARD
-// ─────────────────────────────────────────────────────────────
+// ─── DAILY ────────────────────────────
 
-export async function fetchLeaderboard(type = 'global') {
-  if (type === 'global') {
-    const { data, error } = await supabase
-      .from('v_global_leaderboard')
-      .select('*')
-      .limit(50)
+export async function fetchDaily(date) {
+  const { data, error } = await supabase
+    .rpc('get_daily', { date_input: date })
 
-    if (error) throw error
-    return data
+  if (error) throw error
+  return data?.[0]
+}
+
+// ─── SAVE SCORE ───────────────────────
+
+export async function saveScore(payload) {
+  const { data: user } = await supabase.auth.getUser()
+
+  const { error } = await supabase.from('scores').insert({
+    user_id: user.user.id,
+    puzzle_id: payload.puzzle_id,
+    daily_challenge_id: payload.daily_challenge_id,
+    difficulty: payload.difficulty,
+    completion_time: payload.completion_time,
+    mistakes: payload.mistakes,
+    hints_used: payload.hints_used ?? 0,
+    is_daily: payload.is_daily ?? false
+  })
+
+  if (error) throw error
+  return { ok: true }
+}
+
+// ─── LEADERBOARD ──────────────────────
+
+export async function fetchLeaderboard(type = 'daily', date) {
+  let query = supabase.from('scores').select(`
+    user_id,
+    completion_time,
+    mistakes,
+    difficulty,
+    completed_at
+  `)
+
+  if (type === 'daily') {
+    query = query.eq('is_daily', true)
+    if (date) query = query.eq('created_at', date)
   }
 
-  const { data, error } = await supabase
-    .from('v_daily_leaderboard')
-    .select('*')
-    .limit(50)
+  const { data, error } = await query.order('completion_time', { ascending: true })
 
   if (error) throw error
   return data
 }
 
-// ─────────────────────────────────────────────────────────────
-// GAME STATE (localStorage оставляем)
-// ─────────────────────────────────────────────────────────────
+// ─── PROFILE ──────────────────────────
 
-const SAVE_KEY = 'neuroku_game_state'
-const DAILY_KEY = 'neuroku_daily_state'
-
-export function saveGameState(state) {
-  localStorage.setItem(SAVE_KEY, JSON.stringify(state))
-}
-
-export function loadGameState() {
-  const raw = localStorage.getItem(SAVE_KEY)
-  return raw ? JSON.parse(raw) : null
-}
-
-export function clearGameState() {
-  localStorage.removeItem(SAVE_KEY)
-}
-
-export function saveDailyState(state) {
-  localStorage.setItem(DAILY_KEY, JSON.stringify(state))
-}
-
-export function loadDailyState(date) {
-  const raw = localStorage.getItem(DAILY_KEY)
-  if (!raw) return null
-
-  const state = JSON.parse(raw)
-  return state.date === date ? state : null
-}
-
-// ─────────────────────────────────────────────────────────────
-// STATS (Supabase user_stats)
-// ─────────────────────────────────────────────────────────────
-
-export async function loadStats(userId) {
-  const { data } = await supabase
-    .from('user_stats')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  return data
-}
-
-export async function updateStatsOnWin(userId, { time, mistakes, difficulty }) {
-  const { data: stats } = await supabase
+export async function getProfile(userId) {
+  const { data, error } = await supabase
     .from('user_stats')
     .select('*')
     .eq('user_id', userId)
     .single()
 
-  const updated = {
-    games_played: stats.games_played + 1,
-    games_won: stats.games_won + 1,
-    total_time: stats.total_time + time,
-    total_mistakes: stats.total_mistakes + mistakes,
-    [`wins_${difficulty}`]: stats[`wins_${difficulty}`] + 1,
-  }
-
-  const { data, error } = await supabase
-    .from('user_stats')
-    .update(updated)
-    .eq('user_id', userId)
-
   if (error) throw error
   return data
 }
-
-// ─────────────────────────────────────────────────────────────
-// MOCK (убрать в prod)
-// ─────────────────────────────────────────────────────────────
-
-export const MOCK_LEADERBOARD = []
