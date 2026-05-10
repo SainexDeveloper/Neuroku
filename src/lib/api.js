@@ -21,6 +21,7 @@ export async function logout() {
 
 export async function getUser() {
   const { data } = await supabase.auth.getUser()
+  setUser(data?.user ?? null)
   return data?.user ?? null
 }
 

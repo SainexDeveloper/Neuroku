@@ -21,6 +21,7 @@ import {
   loadStats,
   updateStatsOnWin,
 } from './lib/storage.js'
+import { supabase } from './lib/supabase.js'
 
 // ─── Initial game state factory ───────────────────────────────────────────────
 function makeGameState(puzzle, solution, difficulty) {
@@ -76,6 +77,23 @@ export default function App() {
     }
   }, [user, pendingAction])
 
+  const [profile, setProfile] = useState(null)
+
+  useEffect(() => {
+    if (!user?.id) return
+  
+    const load = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+  
+      setProfile(data)
+    }
+  
+    load()
+  }, [user?.id])
   // ── Game state ────────────────────────────────────────────────────────────
 
   const [gameState, setGameState] = useState(() => {
@@ -246,6 +264,10 @@ export default function App() {
               onClose={() => setShowAuth(false)}
             />
           )}
+
+          {user && (
+  <ProfilePage user={user} profile={profile} T={T} />
+)}
 
           <footer style={{
             marginTop: 70,
