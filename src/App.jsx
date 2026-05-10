@@ -72,7 +72,7 @@ export default function App() {
     }
   }, [user, pendingAction])
 
-  // ── Game state ─────────────────────────────────────────────────────────────
+  // ── Game state ────────────────────────────────────────────────────────────
   const [gameState, setGameState] = useState(() => {
     const saved = loadGameState()
     return saved && !saved.completed ? saved : null
