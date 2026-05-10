@@ -38,7 +38,7 @@ export default function AuthModal({ T, onClose, defaultTab = 'login' }) {
     if (regPassword !== regConfirm) { setError('Passwords do not match'); return }
     setLoading(true)
     try {
-      await register(regUsername.trim(), regEmail.trim(), regPassword)
+      await register(regEmail.trim(), regPassword, regUsername.trim())
       onClose()
     } catch (err) {
       setError(err.message)

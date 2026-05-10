@@ -24,27 +24,28 @@ export function AuthProvider({ children }) {
     supabase.auth.signInWithPassword({ email, password })
 
   const register = async (email, password, username) => {
+    const cleanEmail = email.trim().toLowerCase()
+  
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
       options: {
         data: { username }
       }
     })
-
+  
     if (error) throw error
-
-    // создаём профиль ТОЛЬКО после signup
-    const userId = data.user?.id
-    if (userId) {
-      await supabase.from('profiles').insert({
-        id: userId,
-        username,
-        rating: 1000,
-        games_won: 0
-      })
-    }
-
+  
+    const user = data.user
+    if (!user) throw new Error("User not created")
+  
+    await supabase.from('profiles').insert({
+      id: user.id,
+      username,
+      rating: 1000,
+      games_won: 0
+    })
+  
     return data
   }
 
