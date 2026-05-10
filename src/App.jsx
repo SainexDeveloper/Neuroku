@@ -13,10 +13,14 @@ import { THEMES, UNLOCKABLE_THEMES } from './styles/theme.js'
 import './App.css'
 import { generateSudoku, getDailyPuzzle, createNotes } from './lib/sudoku.js'
 import {
-  loadGameState, saveGameState, clearGameState,
-  loadDailyState, saveDailyState,
-  loadStats, updateStatsOnWin,
-} from './lib/api.js'
+  loadGameState,
+  saveGameState,
+  clearGameState,
+  loadDailyState,
+  saveDailyState,
+  loadStats,
+  updateStatsOnWin,
+} from './lib/storage.js'
 
 // ─── Initial game state factory ───────────────────────────────────────────────
 function makeGameState(puzzle, solution, difficulty) {
@@ -73,7 +77,7 @@ export default function App() {
   }, [user, pendingAction])
 
   // ── Game state ────────────────────────────────────────────────────────────
-  
+
   const [gameState, setGameState] = useState(() => {
     const saved = loadGameState()
     return saved && !saved.completed ? saved : null

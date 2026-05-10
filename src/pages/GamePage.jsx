@@ -4,7 +4,7 @@ import VictoryModal from '../components/VictoryModal.jsx'
 import { getConflicts, isSolved, digitCounts, formatTime, cloneBoard, clearRelatedNotes } from '../lib/sudoku.js'
 import { generateHint, HINT_LABELS, MAX_HINTS } from '../lib/hint.js'
 import { buttonStyle, pillStyle, DIFFICULTIES } from '../styles/theme.js'
-import { saveGameState } from '../lib/api.js'
+import { saveGameState } from "../lib/storage.js"
 
 // ─── GamePage ────────────────────────────────────────────────────────────────
 

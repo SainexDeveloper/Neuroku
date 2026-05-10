@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LeaderboardList } from './DailyPage.jsx'
-import { MOCK_LEADERBOARD } from '../lib/api.js'
+import { MOCK_LEADERBOARD } from "../lib/mock.js"
 import { formatTime } from '../lib/sudoku.js'
 
 const TABS = [

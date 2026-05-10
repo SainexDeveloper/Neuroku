@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo } from 'react'
 import SudokuBoard from '../components/SudokuBoard.jsx'
 import { getConflicts, isSolved, formatTime, cloneBoard, clearRelatedNotes } from '../lib/sudoku.js'
 import { buttonStyle, pillStyle, DIFFICULTIES } from '../styles/theme.js'
-import { saveDailyState, MOCK_LEADERBOARD } from '../lib/api.js'
+import { saveDailyState } from "../lib/storage.js"
 
 // ─── DailyPage ────────────────────────────────────────────────────────────────
 
