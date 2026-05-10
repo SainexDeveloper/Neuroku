@@ -4,6 +4,9 @@ import HomePage from './pages/HomePage.jsx'
 import GamePage from './pages/GamePage.jsx'
 import DailyPage from './pages/DailyPage.jsx'
 import StatsPage from './pages/StatsPage.jsx'
+import AuthModal from './components/AuthModal.jsx'
+import ProfilePage from './pages/ProfilePage.jsx'
+import { useAuth } from './context/AuthContext.jsx'
 import LeaderboardPage from './pages/LeaderboardPage.jsx'
 import { THEMES, UNLOCKABLE_THEMES } from './styles/theme.js'
 import './App.css'
@@ -39,6 +42,16 @@ export default function App() {
   const baseTheme = THEMES[themeName] ?? THEMES.dark
   const unlockable = UNLOCKABLE_THEMES[themeName]
   const T = unlockable ? { ...baseTheme, ...unlockable } : baseTheme
+  const { user } = useAuth()
+
+  const guard = (action) => {
+    if (!user) {
+      setShowAuth(true)
+      notify('Please login first', 'info')
+      return false
+    }
+    return true
+  }
 
   useEffect(() => {
     localStorage.setItem('neuroku_theme', themeName)
@@ -46,6 +59,7 @@ export default function App() {
 
   // ── Page routing ───────────────────────────────────────────────────────────
   const [page, setPage] = useState('home')
+  const [showAuth, setShowAuth] = useState(false)
 
   // ── Game state ─────────────────────────────────────────────────────────────
   const [gameState, setGameState] = useState(() => {
@@ -76,26 +90,41 @@ export default function App() {
 
   // ── Start a new free game ──────────────────────────────────────────────────
   const startGame = useCallback((difficulty = 'medium') => {
+    if (!guard()) return
+  
     clearGameState()
+  
     const { puzzle, solution } = generateSudoku(difficulty)
+  
     const gs = makeGameState(puzzle, solution, difficulty)
+  
     setGameState(gs)
     setShowVictory(false)
     setPage('play')
+  
     saveGameState(gs)
-  }, [])
+  }, [user])
 
   // ── Start daily challenge ──────────────────────────────────────────────────
   const startDaily = useCallback(() => {
+    if (!guard()) return
+  
     const today = new Date().toISOString().slice(0, 10)
+  
     if (!dailyState) {
       const { puzzle, solution, difficulty } = getDailyPuzzle()
-      const gs = { ...makeGameState(puzzle, solution, difficulty), date: today }
+  
+      const gs = {
+        ...makeGameState(puzzle, solution, difficulty),
+        date: today
+      }
+  
       setDailyState(gs)
       saveDailyState(gs)
     }
+  
     setPage('daily')
-  }, [dailyState])
+  }, [user, dailyState])
 
   const handleDailyComplete = useCallback(() => {
     setStats(s => {
@@ -127,10 +156,13 @@ export default function App() {
 
         {/* ── Nav ─────────────────────────────────────────────────────────── */}
         <Nav
-          page={page} setPage={setPage}
-          theme={themeName} setTheme={setThemeName}
-          T={T}
-        />
+            page={page}
+            setPage={setPage}
+            theme={themeName}
+            setTheme={setThemeName}
+            T={T}
+            openAuth={() => setShowAuth(true)} 
+          />
 
         {/* ── Notification toast ────────────────────────────────────────── */}
         {notification && (
@@ -197,6 +229,12 @@ export default function App() {
           {page === 'leaderboard' && (
             <LeaderboardPage T={T} />
           )}
+
+          <AuthModal
+            open={showAuth}
+            onClose={() => setShowAuth(false)}
+            T={T}
+          />
 
           <footer style={{
             marginTop: 70,
