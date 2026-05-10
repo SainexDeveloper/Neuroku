@@ -8,13 +8,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.auth.getUser()
-      setUser(data.user ?? null)
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null)
       setLoading(false)
-    }
-
-    init()
+    })
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
@@ -26,14 +23,30 @@ export function AuthProvider({ children }) {
   const login = (email, password) =>
     supabase.auth.signInWithPassword({ email, password })
 
-  const register = (email, password, username) =>
-    supabase.auth.signUp({
+  const register = async (email, password, username) => {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { username }
       }
     })
+
+    if (error) throw error
+
+    // создаём профиль ТОЛЬКО после signup
+    const userId = data.user?.id
+    if (userId) {
+      await supabase.from('profiles').insert({
+        id: userId,
+        username,
+        rating: 1000,
+        games_won: 0
+      })
+    }
+
+    return data
+  }
 
   const logout = () => supabase.auth.signOut()
 
