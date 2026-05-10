@@ -5,48 +5,31 @@ const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null)
-      setLoading(false)
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user)
     })
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null)
-      }
-    )
-
-    return () => listener.subscription.unsubscribe()
+    supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null)
+    })
   }, [])
 
-  const login = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({
+  const login = (email, password) =>
+    supabase.auth.signInWithPassword({ email, password })
+
+  const register = (email, password, username) =>
+    supabase.auth.signUp({
       email,
       password,
+      options: { data: { username } }
     })
-    if (error) throw error
-  }
 
-  const register = async (username, email, password) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username },
-      },
-    })
-    if (error) throw error
-  }
-
-  const logout = async () => {
-    await supabase.auth.signOut()
-  }
+  const logout = () => supabase.auth.signOut()
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )
