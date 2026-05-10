@@ -6,7 +6,7 @@ import DailyPage from './pages/DailyPage.jsx'
 import StatsPage from './pages/StatsPage.jsx'
 import LeaderboardPage from './pages/LeaderboardPage.jsx'
 import { THEMES, UNLOCKABLE_THEMES } from './styles/theme.js'
-import './app.css'
+import './App.css'
 import { generateSudoku, getDailyPuzzle, createNotes } from './lib/sudoku.js'
 import {
   loadGameState, saveGameState, clearGameState,
