@@ -1,33 +1,51 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState } from 'react'
+import { supabase } from '../lib/supabase.js'
 
 const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
 
-  // пример загрузки user
-  useEffect(() => {
-    const saved = localStorage.getItem('user')
-    if (saved) setUser(JSON.parse(saved))
-  }, [])
+  // LOGIN
+  const login = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-  const login = (userData) => {
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
+    if (error) throw error
+
+    setUser(data.user)
+    return data.user
   }
 
-  const logout = () => {
+  // REGISTER
+  const register = async (username, email, password) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username },
+      },
+    })
+
+    if (error) throw error
+
+    setUser(data.user)
+    return data.user
+  }
+
+  // LOGOUT (optional)
+  const logout = async () => {
+    await supabase.auth.signOut()
     setUser(null)
-    localStorage.removeItem('user')
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuth() {
-  return useContext(AuthContext)
-}
+export const useAuth = () => useContext(AuthContext)
