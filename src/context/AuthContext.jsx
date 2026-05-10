@@ -1,58 +1,58 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [token, setToken] = useState(localStorage.getItem('token'))
+  const [loading, setLoading] = useState(true)
 
-  const isAuth = !!user
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ?? null)
+      setLoading(false)
+    })
 
-  const saveSession = (t, u) => {
-    setToken(t)
-    setUser(u)
-    localStorage.setItem('token', t)
-  }
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null)
+      }
+    )
 
-  const logout = () => {
-    setUser(null)
-    setToken(null)
-    localStorage.removeItem('token')
-  }
+    return () => listener.subscription.unsubscribe()
+  }, [])
 
   const login = async (email, password) => {
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     })
-
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error)
-
-    saveSession(data.token, data.user)
+    if (error) throw error
     return data.user
   }
 
-  const register = async (username, email, password) => {
-    const res = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password })
+  const register = async (email, password, username) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username }
+      }
     })
-
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error)
-
-    saveSession(data.token, data.user)
+    if (error) throw error
     return data.user
+  }
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
   }
 
   return (
     <AuthContext.Provider value={{
       user,
-      token,
-      isAuth,
+      loading,
+      isAuth: !!user,
       login,
       register,
       logout
@@ -62,6 +62,4 @@ export function AuthProvider({ children }) {
   )
 }
 
-export function useAuth() {
-  return useContext(AuthContext)
-}
+export const useAuth = () => useContext(AuthContext)
