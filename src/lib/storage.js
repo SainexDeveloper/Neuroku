@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js'
 import { calculateRating } from './rating.js'
+import { MOCK_LEADERBOARD } from './mockLeaderboard'
 
 // ─────────────────────────────────────────────
 // KEYS (local fallback)
@@ -329,4 +330,56 @@ export async function fetchLeaderboard(type = 'daily') {
     streak: 0, // позже подключим streak отдельно
     avatar: row.profiles?.avatar_initials || 'PL',
   }))
+}
+
+export async function fetchLeaderboardZG(tab = 'daily') {
+
+  try {
+
+    const today = new Date().toISOString().slice(0, 10)
+
+    let query = supabase.from('daily_results').select('*')
+
+    if (tab === 'daily') {
+
+      query = query.eq('date', today)
+
+    }
+
+    const { data, error } = await query.order('time', { ascending: true })
+
+    if (error || !data || data.length === 0) {
+
+      console.warn('Leaderboard fallback to mock:', error)
+
+      return MOCK_LEADERBOARD
+
+    }
+
+    return data.map((x, i) => ({
+
+      id: x.user_id,
+
+      name: `Player ${i + 1}`,
+
+      avatar: 'P' + (i + 1),
+
+      time: x.time,
+
+      mistakes: x.errors,
+
+      streak: 0,
+
+      rank: i + 1,
+
+    }))
+
+  } catch (e) {
+
+    console.error('Leaderboard error:', e)
+
+    return MOCK_LEADERBOARD
+
+  }
+
 }

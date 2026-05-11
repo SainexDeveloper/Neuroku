@@ -40,6 +40,19 @@ export default function LeaderboardPage({ T }) {
   useEffect(() => {
     let active = true
     setLoading(true)
+  
+    fetchLeaderboardZG(tab).then(data => {
+      if (!active) return
+      setEntries(Array.isArray(data) ? data : [])
+      setLoading(false)
+    })
+  
+    return () => { active = false }
+  }, [tab])
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
 
     fetchLeaderboard(tab).then(data => {
       if (!active) return

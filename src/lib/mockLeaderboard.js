@@ -1,0 +1,38 @@
+export const MOCK_LEADERBOARD = [
+    {
+      id: '1',
+      name: 'NeurokuBot',
+      avatar: 'NB',
+      time: 210,
+      mistakes: 0,
+      streak: 12,
+      rank: 1,
+    },
+    {
+      id: '2',
+      name: 'AlphaSolver',
+      avatar: 'AS',
+      time: 240,
+      mistakes: 1,
+      streak: 8,
+      rank: 2,
+    },
+    {
+      id: '3',
+      name: 'GridMaster',
+      avatar: 'GM',
+      time: 260,
+      mistakes: 0,
+      streak: 5,
+      rank: 3,
+    },
+    {
+      id: '4',
+      name: 'DailyMind',
+      avatar: 'DM',
+      time: 300,
+      mistakes: 2,
+      streak: 4,
+      rank: 4,
+    },
+  ]
