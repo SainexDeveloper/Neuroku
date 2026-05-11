@@ -85,7 +85,7 @@ export default function App() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
   
       setProfile(data)
     }
@@ -157,6 +157,10 @@ export default function App() {
   const startDaily = useCallback(() => {
     requireAuth(async () => {
       const daily = await ensureDailyExists()
+      if (!daily) {
+        notify('Daily puzzle not ready', 'error')
+        return
+      }
   
       const today = new Date().toISOString().slice(0, 10)
   
