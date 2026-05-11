@@ -3,16 +3,19 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { supabase } from '../lib/supabase.js'
 import { cardStyle, buttonStyle } from '../styles/theme.js'
 
-export default function ProfilePage({T, stats, userId: propUserId, onOpenAuth }){
+export default function ProfilePage({
+  T,
+  stats,
+  userId: propUserId,
+  onOpenAuth,
+}) {
   const { user: me } = useAuth()
 
   const userId = propUserId ?? me?.id
-  const isOwnProfile = userId === me?.id
 
   const [profile, setProfile] = useState(null)
   const [games, setGames] = useState([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('overview')
 
   useEffect(() => {
     if (!userId) return
@@ -20,16 +23,14 @@ export default function ProfilePage({T, stats, userId: propUserId, onOpenAuth })
     const loadProfile = async () => {
       setLoading(true)
 
-      // PROFILE
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
 
-      if (!profileError) setProfile(profileData)
+      setProfile(profileData)
 
-      // GAMES
       const { data: gamesData } = await supabase
         .from('games')
         .select('*')
@@ -47,8 +48,14 @@ export default function ProfilePage({T, stats, userId: propUserId, onOpenAuth })
   if (!me && !propUserId) {
     return (
       <div style={{ textAlign: 'center', padding: 40 }}>
-        <h2 style={{ color: T.text }}>Sign in to view profile</h2>
-        <button onClick={onOpenAuth} style={buttonStyle(T, 'primary')}>
+        <h2 style={{ color: T.text }}>
+          Sign in to view profile
+        </h2>
+
+        <button
+          onClick={onOpenAuth}
+          style={buttonStyle(T, 'primary')}
+        >
           Sign In
         </button>
       </div>
@@ -56,79 +63,99 @@ export default function ProfilePage({T, stats, userId: propUserId, onOpenAuth })
   }
 
   if (loading) {
-    return <div style={{ padding: 40, color: T.textMuted }}>Loading...</div>
+    return (
+      <div style={{ padding: 40, color: T.textMuted }}>
+        Loading...
+      </div>
+    )
   }
 
   if (!profile) {
-    return <div style={{ padding: 40 }}>Profile not found</div>
+    return (
+      <div style={{ padding: 40 }}>
+        Profile not found
+      </div>
+    )
   }
 
-  return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: 24 }}>
+  const winRate =
+    stats.gamesPlayed > 0
+      ? Math.round((stats.wins / stats.gamesPlayed) * 100)
+      : 0
 
-      <div style={{
-        display: 'flex',
-        gap: 10,
-        marginTop: 20,
-        marginBottom: 24,
-        flexWrap: 'wrap',
-      }}>
-        {[
-          ['overview', 'Profile'],
-          ['stats', 'Stats'],
-          ['history', 'History'],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
+  return (
+    <div
+      style={{
+        maxWidth: 900,
+        margin: '0 auto',
+        padding: 24,
+      }}
+    >
+      {/* PROFILE HEADER */}
+      <div
+        style={{
+          ...cardStyle(T),
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 18,
+          }}
+        >
+          <div
             style={{
-              ...buttonStyle(T, tab === id ? 'primary' : 'ghost'),
+              width: 74,
+              height: 74,
+              borderRadius: '50%',
+              background: profile.avatar_color || T.accent,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 28,
+              fontWeight: 800,
+              color: '#fff',
             }}
           >
-            {label}
-          </button>
-        ))}
-      </div>
-      
-      {tab === 'overview' && (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
-        gap: 14,
-      }}>
-        <div style={cardStyle(T)}>
-          <div style={{ color: T.textMuted }}>Rating</div>
-          <div style={{ fontSize: 32, fontWeight: 800 }}>
-            {profile.rating ?? 1000}
+            {profile.avatar_initials || 'N'}
           </div>
-        </div>
 
-        <div style={cardStyle(T)}>
-          <div style={{ color: T.textMuted }}>Games</div>
-          <div style={{ fontSize: 32, fontWeight: 800 }}>
-            {games.length}
-          </div>
-        </div>
+          <div>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 32,
+                fontWeight: 800,
+              }}
+            >
+              {profile.username}
+            </h1>
 
-        <div style={cardStyle(T)}>
-          <div style={{ color: T.textMuted }}>Country</div>
-          <div style={{ fontSize: 24, fontWeight: 700 }}>
-            {profile.country || '—'}
+            <div style={{ color: T.textMuted }}>
+              {profile.bio || 'No bio yet'}
+            </div>
           </div>
         </div>
       </div>
-    )}
 
-    {tab === 'stats' && (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
-        gap: 14,
-      }}>
+      {/* STATS */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(auto-fit,minmax(180px,1fr))',
+          gap: 14,
+          marginBottom: 24,
+        }}
+      >
         {[
-          ['Games Played', stats.gamesPlayed],
+          ['Rating', profile.rating ?? 1000],
+          ['Games', games.length],
           ['Wins', stats.wins],
-          ['Mistakes', stats.mistakes],
+          ['Win Rate', `${winRate}%`],
+          ['Best Time', stats.bestTime ?? '—'],
           ['Streak', stats.streak],
         ].map(([label, value]) => (
           <div key={label} style={cardStyle(T)}>
@@ -136,41 +163,87 @@ export default function ProfilePage({T, stats, userId: propUserId, onOpenAuth })
               {label}
             </div>
 
-            <div style={{
-              fontSize: 32,
-              fontWeight: 800,
-              marginTop: 8,
-            }}>
+            <div
+              style={{
+                fontSize: 32,
+                fontWeight: 800,
+                marginTop: 8,
+              }}
+            >
               {value}
             </div>
           </div>
         ))}
       </div>
-    )}
 
-    {tab === 'history' && (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-      }}>
-        {games.map(g => (
-          <div key={g.id} style={cardStyle(T)}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}>
-              <b>{g.difficulty}</b>
+      {/* HISTORY */}
+      <div style={{ marginTop: 10 }}>
+        <h2
+          style={{
+            marginBottom: 14,
+            fontSize: 24,
+          }}
+        >
+          Match History
+        </h2>
 
-              <span style={{ color: T.textMuted }}>
-                {g.time}s
-              </span>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+          }}
+        >
+          {games.length === 0 && (
+            <div style={cardStyle(T)}>
+              No games played yet
             </div>
-          </div>
-        ))}
-      </div>
-    )}
+          )}
 
+          {games.map((g) => (
+            <div
+              key={g.id}
+              style={{
+                ...cardStyle(T),
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 16,
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {g.difficulty}
+                </div>
+
+                <div
+                  style={{
+                    color: T.textMuted,
+                    fontSize: 13,
+                    marginTop: 4,
+                  }}
+                >
+                  Errors: {g.errors ?? 0}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: 18,
+                }}
+              >
+                {g.time}s
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

@@ -101,11 +101,6 @@ export default function Nav({
   // ──────────────────────────────
   const links = useMemo(() => {
     const base = [...NAV_LINKS]
-
-    if (user) {
-      base.push({ id: 'profile', label: 'Profile', icon: '👤' })
-    }
-
     return base
   }, [user])
 
