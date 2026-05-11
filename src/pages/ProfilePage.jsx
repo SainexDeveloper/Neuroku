@@ -68,6 +68,7 @@ const ACHIEVEMENTS = [
 
 export default function ProfilePage({
   T,
+  stats,
   userId: propUserId,
   onOpenAuth,
 }) {
