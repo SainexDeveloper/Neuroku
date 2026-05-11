@@ -1,45 +1,12 @@
-// src/lib/storage.js
-
 import { supabase } from './supabase.js'
+
+// ─────────────────────────────────────────────
+// KEYS (local fallback)
+// ─────────────────────────────────────────────
 
 const GAME_KEY = 'neuroku_game_state'
 const DAILY_KEY = 'neuroku_daily_state'
 const STATS_KEY = 'neuroku_stats'
-
-// ─────────────────────────────────────────────
-// GAME STATE
-// ─────────────────────────────────────────────
-
-export function saveGameState(state) {
-  localStorage.setItem(GAME_KEY, JSON.stringify(state))
-}
-
-export function loadGameState() {
-  const raw = localStorage.getItem(GAME_KEY)
-  return raw ? JSON.parse(raw) : null
-}
-
-export function clearGameState() {
-  localStorage.removeItem(GAME_KEY)
-}
-
-// ─────────────────────────────────────────────
-// DAILY
-// ─────────────────────────────────────────────
-
-export function saveDailyState(state) {
-  localStorage.setItem(DAILY_KEY, JSON.stringify(state))
-}
-
-export function loadDailyState(date) {
-  const raw = localStorage.getItem(DAILY_KEY)
-
-  if (!raw) return null
-
-  const state = JSON.parse(raw)
-
-  return state?.date === date ? state : null
-}
 
 // ─────────────────────────────────────────────
 // DEFAULT STATS
@@ -63,15 +30,45 @@ export const DEFAULT_STATS = {
 }
 
 // ─────────────────────────────────────────────
-// LOCAL STATS
+// GAME STATE (local only)
+// ─────────────────────────────────────────────
+
+export function saveGameState(state) {
+  localStorage.setItem(GAME_KEY, JSON.stringify(state))
+}
+
+export function loadGameState() {
+  const raw = localStorage.getItem(GAME_KEY)
+  return raw ? JSON.parse(raw) : null
+}
+
+export function clearGameState() {
+  localStorage.removeItem(GAME_KEY)
+}
+
+// ─────────────────────────────────────────────
+// DAILY STATE (local only)
+// ─────────────────────────────────────────────
+
+export function saveDailyState(state) {
+  localStorage.setItem(DAILY_KEY, JSON.stringify(state))
+}
+
+export function loadDailyState(date) {
+  const raw = localStorage.getItem(DAILY_KEY)
+  if (!raw) return null
+
+  const state = JSON.parse(raw)
+  return state?.date === date ? state : null
+}
+
+// ─────────────────────────────────────────────
+// LOCAL STATS (guest mode)
 // ─────────────────────────────────────────────
 
 export function loadLocalStats() {
   const raw = localStorage.getItem(STATS_KEY)
-
-  return raw
-    ? JSON.parse(raw)
-    : DEFAULT_STATS
+  return raw ? JSON.parse(raw) : DEFAULT_STATS
 }
 
 export function saveLocalStats(stats) {
@@ -79,14 +76,11 @@ export function saveLocalStats(stats) {
 }
 
 // ─────────────────────────────────────────────
-// CLOUD STATS
+// LOAD STATS (cloud + fallback)
 // ─────────────────────────────────────────────
 
-export async function loadStats(userId = null) {
-  // guest mode
-  if (!userId) {
-    return loadLocalStats()
-  }
+export async function loadStats(userId) {
+  if (!userId) return loadLocalStats()
 
   const { data, error } = await supabase
     .from('profiles')
@@ -104,29 +98,34 @@ export async function loadStats(userId = null) {
   }
 }
 
-export async function saveStats(stats, userId = null) {
-  // guest mode
+// ─────────────────────────────────────────────
+// SAVE STATS (cloud + backup)
+// ─────────────────────────────────────────────
+
+export async function saveStats(stats, userId) {
   if (!userId) {
     saveLocalStats(stats)
     return
   }
 
-  await supabase
+  const { error } = await supabase
     .from('profiles')
-    .update({
-      stats,
-    })
+    .update({ stats })
     .eq('id', userId)
 
-  // optional local backup
+  if (error) {
+    console.error('Failed to save stats:', error)
+  }
+
+  // always keep local backup
   saveLocalStats(stats)
 }
 
 // ─────────────────────────────────────────────
-// UPDATE ON WIN
+// UPDATE STATS ON WIN (PURE FUNCTION + SAFE SAVE)
 // ─────────────────────────────────────────────
 
-export async function updateStatsOnWin(stats, payload, userId = null) {
+export function calculateStatsOnWin(stats, payload) {
   const today = new Date().toISOString().slice(0, 10)
 
   const yesterday = new Date(Date.now() - 86400000)
@@ -140,11 +139,10 @@ export async function updateStatsOnWin(stats, payload, userId = null) {
         ? stats.streak + 1
         : 1
 
-  const updated = {
+  return {
     ...stats,
 
     gamesPlayed: stats.gamesPlayed + 1,
-
     wins: stats.wins + 1,
 
     bestTime:
@@ -152,26 +150,28 @@ export async function updateStatsOnWin(stats, payload, userId = null) {
         ? payload.time
         : Math.min(stats.bestTime, payload.time),
 
-    totalTime:
-      stats.totalTime + payload.time,
-
-    mistakes:
-      stats.mistakes + payload.mistakes,
+    totalTime: stats.totalTime + payload.time,
+    mistakes: stats.mistakes + payload.mistakes,
 
     streak,
-
-    longestStreak:
-      Math.max(stats.longestStreak, streak),
+    longestStreak: Math.max(stats.longestStreak, streak),
 
     lastPlayedDate: today,
 
     byDifficulty: {
       ...stats.byDifficulty,
-
       [payload.difficulty]:
         (stats.byDifficulty?.[payload.difficulty] ?? 0) + 1,
     },
   }
+}
+
+// ─────────────────────────────────────────────
+// SAFE WRAPPER (IMPORTANT FIX)
+// ─────────────────────────────────────────────
+
+export async function updateStatsOnWin(stats, payload, userId) {
+  const updated = calculateStatsOnWin(stats, payload)
 
   await saveStats(updated, userId)
 
