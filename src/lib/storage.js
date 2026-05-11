@@ -268,3 +268,51 @@ export async function updateUserStatsOnWin(userId, payload) {
 }
 
 export { updateUserStatsOnWin as updateStatsOnWin }
+
+// ─────────────────────────────────────────────
+// REAL LEADERBOARD (SUPABASE)
+// ─────────────────────────────────────────────
+
+export async function fetchLeaderboard(type = 'daily') {
+  let query = supabase
+    .from('scores')
+    .select(`
+      completion_time,
+      mistakes,
+      difficulty,
+      is_daily,
+      completed_at,
+      profiles (
+        username,
+        avatar_initials
+      )
+    `)
+
+  if (type === 'daily') {
+    query = query.eq('is_daily', true)
+  }
+
+  if (type === 'weekly') {
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    query = query.gte('completed_at', weekAgo.toISOString())
+  }
+
+  const { data, error } = await query
+    .order('completion_time', { ascending: true })
+    .limit(50)
+
+  if (error) {
+    console.error('Leaderboard error:', error)
+    return []
+  }
+
+  return data.map((row, i) => ({
+    rank: i + 1,
+    name: row.profiles?.username || 'Player',
+    time: row.completion_time,
+    mistakes: row.mistakes ?? 0,
+    streak: 0, // позже подключим streak отдельно
+    avatar: row.profiles?.avatar_initials || 'PL',
+  }))
+}

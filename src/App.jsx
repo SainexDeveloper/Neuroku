@@ -18,8 +18,8 @@ import {
   loadDailyState,
   saveDailyState,
   loadStats,
-  updateUserStatsOnWin,
-} from './lib/storage.js'
+  updateStatsOnWin
+} from "./lib/storage.js"
 import { supabase } from './lib/supabase.js'
 
 // ─── Initial game state factory ───────────────────────────────────────────────

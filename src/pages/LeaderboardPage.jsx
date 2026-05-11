@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LeaderboardList } from './DailyPage.jsx'
 import { formatTime } from '../lib/sudoku.js'
+import { fetchLeaderboard } from '../lib/storage.js'
 
 const TABS = [
   { id: 'daily',  label: '📅 Daily'  },
@@ -8,18 +9,22 @@ const TABS = [
   { id: 'global', label: '🌍 All-Time' },
 ]
 
-// Vary the mock data slightly per tab for realism
-function getEntries(tab) {
-  if (tab === 'daily')  return MOCK_LEADERBOARD
-  if (tab === 'weekly') return MOCK_LEADERBOARD.map((e, i) => ({ ...e, streak: e.streak + i, time: e.time + i * 12 }))
-  return MOCK_LEADERBOARD.map((e, i) => ({ ...e, streak: e.streak * 3 + i * 2, time: e.time - i * 3 }))
-}
-
 export default function LeaderboardPage({ T }) {
   const [tab, setTab] = useState('daily')
-  const entries = getEntries(tab)
 
   const topThree = entries.slice(0, 3)
+
+  const [entries, setEntries] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+
+    fetchLeaderboard(tab).then(data => {
+      setEntries(data)
+      setLoading(false)
+    })
+  }, [tab])
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px 64px' }}>
@@ -29,6 +34,12 @@ export default function LeaderboardPage({ T }) {
       <p style={{ color: T.textMuted, marginBottom: 28, fontSize: 16 }}>
         Top solvers from around the world.
       </p>
+
+      {loading ? (
+        <div style={{ color: T.textMuted }}>Loading leaderboard...</div>
+      ) : (
+        <LeaderboardList T={T} entries={entries} highlightRank={null} />
+      )}
 
       {/* Tabs */}
       <div style={{
