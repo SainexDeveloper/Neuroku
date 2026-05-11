@@ -1,18 +1,27 @@
-# React + Vite
+## Что это за продукт
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Neuroku — это моя онлайн-платформа для игры в судоку с ежедневными заданиями, системой рейтингов и встроенным ИИ-помощником.
 
-Currently, two official plugins are available:
+## Что я сделал
+Я разработал полноценное приложение, которое включает:
+- классическую игру судоку с уровнями сложности
+- ежедневную общую задачу для всех игроков
+- таблицу лидеров на основе времени и ошибок
+- систему авторизации и профили пользователей
+- сохранение прогресса и статистики
+- встроенного ИИ-помощника, который помогает с подсказками, объяснениями и поддержкой игрока
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Для кого это
+Мой проект рассчитан на:
+- любителей головоломок и логических игр
+- людей, которые хотят тренировать мозг каждый день
+- игроков, которым нравится соревноваться с другими
+- пользователей, которые хотят простую и удобную версию судоку
 
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Почему это полезно
+Я сделал Neuroku, чтобы превратить обычное судоку в современный соревновательный опыт:
+- у всех игроков одна и та же ежедневная задача
+- есть глобальный рейтинг результатов
+- сохраняется прогресс и статистика
+- встроенный ИИ-помощник помогает учиться и быстрее понимать ошибки
+- интерфейс простой, быстрый и современный
