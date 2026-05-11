@@ -6,7 +6,7 @@ import { calculateRating } from './rating.js'
 // ─────────────────────────────────────────────
 
 const PLAY_KEY = 'neuroku_play_state'
-const DAILY_KEY = 'neuroku_daily_state'
+const DAILY_KEY = 'neuroku_daily'
 const STATS_KEY = 'neuroku_stats'
 
 // ─────────────────────────────────────────────
@@ -65,16 +65,12 @@ export function clearGameState() {
 // ─────────────────────────────────────────────
 
 export function saveDailyState(state) {
-  localStorage.setItem(
-    'neuroku_daily',
-    JSON.stringify(state)
-  )
+  localStorage.setItem(DAILY_KEY, JSON.stringify(state))
 }
 
 export function loadDailyState(today) {
   try {
-    const raw = localStorage.getItem('neuroku_daily')
-
+    const raw = localStorage.getItem(DAILY_KEY)
     if (!raw) return null
 
     const parsed = JSON.parse(raw)
@@ -85,6 +81,10 @@ export function loadDailyState(today) {
   } catch {
     return null
   }
+}
+
+export function clearDailyState() {
+  localStorage.removeItem(DAILY_KEY)
 }
 
 // ─────────────────────────────────────────────

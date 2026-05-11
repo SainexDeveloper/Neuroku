@@ -21,16 +21,6 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
   }, [gs?.completed])
 
   useEffect(() => {
-    if (!gs) return
-    if (gs.mode !== 'daily') return
-  
-    // защита от старого состояния
-    if (!Array.isArray(gs.board) || !Array.isArray(gs.notes)) {
-      setGs(null)
-    }
-  }, [])
-
-  useEffect(() => {
     if (!gs || gs.completed) return
   
     const t = setTimeout(() => {
