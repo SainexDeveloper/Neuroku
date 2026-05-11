@@ -62,15 +62,26 @@ export function clearGameState() {
 // ─────────────────────────────────────────────
 
 export function saveDailyState(state) {
-  localStorage.setItem(DAILY_KEY, JSON.stringify(state))
+  localStorage.setItem(
+    'neuroku_daily',
+    JSON.stringify(state)
+  )
 }
 
-export function loadDailyState(date) {
+export function loadDailyState(today) {
+  try {
+    const raw = localStorage.getItem('neuroku_daily')
 
-  const state = safeParse(DAILY_KEY, null)
+    if (!raw) return null
 
-  return state?.date === date ? state : null
+    const parsed = JSON.parse(raw)
 
+    if (parsed.date !== today) return null
+
+    return parsed
+  } catch {
+    return null
+  }
 }
 
 // ─────────────────────────────────────────────

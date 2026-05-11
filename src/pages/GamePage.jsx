@@ -4,11 +4,11 @@ import VictoryModal from '../components/VictoryModal.jsx'
 import { getConflicts, isSolved, digitCounts, formatTime, cloneBoard, clearRelatedNotes } from '../lib/sudoku.js'
 import { generateHint, HINT_LABELS, MAX_HINTS } from '../lib/hint.js'
 import { buttonStyle, pillStyle, DIFFICULTIES } from '../styles/theme.js'
-import { updateUserStatsOnWin, saveGameState } from '../lib/storage.js'
+import { updateUserStatsOnWin, saveGameState, saveStats } from '../lib/storage.js'
 
 // ─── GamePage ────────────────────────────────────────────────────────────────
 
-export default function GamePage({ gs, setGs, T, showVictory, setShowVictory, stats, startGame, notify, setStats }) {
+export default function GamePage({gs, setGs, T, showVictory, setShowVictory, stats, setStats, startGame, notify, }) {
   const timerRef = useRef(null)
   
 
@@ -76,6 +76,7 @@ export default function GamePage({ gs, setGs, T, showVictory, setShowVictory, st
       
           if (setStats) {
             setStats(newStats)
+            saveStats(newStats)
           }
       
         }, 400)

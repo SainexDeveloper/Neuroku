@@ -251,18 +251,17 @@ export default function App() {
             <HomePage T={T} startGame={startGame} startDaily={startDaily} />
           )}
 
-          {page === 'play' && gameState && (
-            <GamePage
-              gs={gameState}
-              setGs={setGameState}
-              T={T}
-              showVictory={showVictory}
-              setShowVictory={setShowVictory}
-              stats={stats}
-              startGame={startGame}
-              notify={notify}
-            />
-          )}
+          <GamePage
+            gs={gameState}
+            setGs={setGameState}
+            T={T}
+            showVictory={showVictory}
+            setShowVictory={setShowVictory}
+            stats={stats}
+            setStats={setStats}
+            startGame={startGame}
+            notify={notify}
+          />
 
           {page === 'play' && !gameState && (
             <DifficultyPicker T={T} startGame={startGame} />
@@ -278,8 +277,12 @@ export default function App() {
                 onComplete={handleDailyComplete}
               />
             ) : (
-              <div style={{ padding: 40, textAlign: 'center', color: T.textMuted }}>
-                Loading daily...
+              <div style={{
+                padding: 40,
+                textAlign: 'center',
+                color: T.textMuted
+              }}>
+                Loading daily challenge...
               </div>
             )
           )}
