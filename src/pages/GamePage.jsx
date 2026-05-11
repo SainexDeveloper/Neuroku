@@ -1,6 +1,4 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext.jsx'
-
 import SudokuBoard from '../components/SudokuBoard.jsx'
 import VictoryModal from '../components/VictoryModal.jsx'
 
@@ -10,21 +8,31 @@ import {
   digitCounts,
   formatTime,
   cloneBoard,
-  clearRelatedNotes,
+  clearRelatedNotes
 } from '../lib/sudoku.js'
 
 import {
   generateHint,
   HINT_LABELS,
-  MAX_HINTS,
+  MAX_HINTS
 } from '../lib/hint.js'
 
-import { buttonStyle, pillStyle, DIFFICULTIES } from '../styles/theme.js'
+import {
+  buttonStyle,
+  pillStyle,
+  DIFFICULTIES
+} from '../styles/theme.js'
 
 import {
   saveGameState,
-  updateStatsOnWin,
-} from '../lib/storage.js'
+  updateStatsOnWin
+} from "../lib/storage.js"
+
+import { useAuth } from '../context/AuthContext.jsx'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME PAGE
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function GamePage({
   gs,
@@ -33,16 +41,19 @@ export default function GamePage({
   showVictory,
   setShowVictory,
   stats,
-  setStats, // 👈 ВАЖНО (добавь в родителе)
   startGame,
-  notify,
+  notify
 }) {
-  const timerRef = useRef(null)
-  const { user } = useAuth()
 
-  // ─────────────────────────────
+  const timerRef = useRef(null)
+  const victoryHandledRef = useRef(false)
+
+  const { user } = useAuth()
+  const userId = user?.id ?? null
+
+  // ─────────────────────────────────────────────────────────────────────────
   // TIMER
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (gs.completed) return
 
@@ -57,40 +68,56 @@ export default function GamePage({
     return () => clearInterval(timerRef.current)
   }, [gs.completed])
 
-  // ─────────────────────────────
-  // WIN HANDLER (🔥 FIX HERE)
-  // ─────────────────────────────
-  const handleWin = useCallback(async () => {
+  // ─────────────────────────────────────────────────────────────────────────
+  // HANDLE GAME COMPLETE (🔥 FIX MAIN BUG HERE)
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!gs.completed) return
+    if (victoryHandledRef.current) return
+
+    victoryHandledRef.current = true
+
+    clearInterval(timerRef.current)
+
     const payload = {
-      time: gs.timer,
-      mistakes: gs.errors,
-      difficulty: gs.difficulty,
+      time: gs.timer ?? 0,
+      mistakes: gs.errors ?? 0,
+      difficulty: gs.difficulty ?? 'medium'
     }
 
-    try {
-      const updated = await updateStatsOnWin(
-        stats,
-        payload,
-        user?.id
-      )
+    const run = async () => {
+      try {
+        await updateStatsOnWin(stats, payload, userId)
+      } catch (e) {
+        console.log('Stats update error:', e)
+      }
 
-      // 🔥 обновляем UI stats
-      setStats(updated)
-    } catch (e) {
-      console.error('Stats update failed:', e)
+      setTimeout(() => {
+        setShowVictory(true)
+      }, 400)
     }
-  }, [gs.timer, gs.errors, gs.difficulty, stats, user, setStats])
 
-  // ─────────────────────────────
+    run()
+
+  }, [gs.completed])
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RESET victory flag when new game starts
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    victoryHandledRef.current = false
+  }, [gs.difficulty])
+
+  // ─────────────────────────────────────────────────────────────────────────
   // CELL CLICK
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   const handleCellClick = useCallback((r, c) => {
     setGs(g => ({ ...g, selected: [r, c], hintInfo: null }))
   }, [])
 
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // NUMBER INPUT
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   const handleNumber = useCallback((num) => {
     setGs(g => {
       if (!g.selected || g.completed) return g
@@ -100,6 +127,7 @@ export default function GamePage({
 
       if (g.noteMode) {
         const notes = g.notes.map(row => row.map(s => new Set(s)))
+
         if (notes[r][c].has(num)) notes[r][c].delete(num)
         else notes[r][c].add(num)
 
@@ -118,13 +146,6 @@ export default function GamePage({
 
       if (completed) {
         clearInterval(timerRef.current)
-
-        // 🔥 SAVE STATS BEFORE MODAL
-        handleWin()
-
-        setTimeout(() => {
-          setShowVictory(true)
-        }, 400)
       }
 
       return {
@@ -133,17 +154,18 @@ export default function GamePage({
         notes,
         errors,
         completed,
-        hintInfo: null,
+        hintInfo: null
       }
     })
-  }, [handleWin])
+  }, [])
 
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // ERASE
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   const handleErase = useCallback(() => {
     setGs(g => {
       if (!g.selected) return g
+
       const [r, c] = g.selected
       if (g.puzzle[r][c]) return g
 
@@ -157,9 +179,9 @@ export default function GamePage({
     })
   }, [])
 
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // HINT
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   const handleHint = useCallback(() => {
     setGs(g => {
       if (g.hintsUsed >= MAX_HINTS) {
@@ -179,14 +201,14 @@ export default function GamePage({
         ...g,
         hintInfo: hint,
         hintsUsed: g.hintsUsed + 1,
-        selected: [hint.r, hint.c],
+        selected: [hint.r, hint.c]
       }
     })
   }, [notify])
 
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // APPLY HINT
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   const applyHint = useCallback(() => {
     setGs(g => {
       if (!g.hintInfo) return g
@@ -197,16 +219,10 @@ export default function GamePage({
       board[r][c] = val
 
       const notes = clearRelatedNotes(g.notes, r, c, val)
-
       const completed = isSolved(board, g.solution)
 
       if (completed) {
         clearInterval(timerRef.current)
-        handleWin()
-
-        setTimeout(() => {
-          setShowVictory(true)
-        }, 400)
       }
 
       return {
@@ -215,14 +231,14 @@ export default function GamePage({
         notes,
         hintInfo: null,
         completed,
-        selected: [r, c],
+        selected: [r, c]
       }
     })
-  }, [handleWin])
+  }, [])
 
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // KEYBOARD
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (gs.completed) return
@@ -230,37 +246,62 @@ export default function GamePage({
       const num = parseInt(e.key)
       if (num >= 1 && num <= 9) return handleNumber(num)
 
-      if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0')
+      if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
         return handleErase()
+      }
 
-      if (e.key === 'n' || e.key === 'N')
-        return setGs(g => ({ ...g, noteMode: !g.noteMode }))
+      if (e.key === 'n' || e.key === 'N') {
+        setGs(g => ({ ...g, noteMode: !g.noteMode }))
+        return
+      }
+
+      if (!gs.selected) return
+
+      const [r, c] = gs.selected
+
+      const moves = {
+        ArrowUp: [-1, 0],
+        ArrowDown: [1, 0],
+        ArrowLeft: [0, -1],
+        ArrowRight: [0, 1]
+      }
+
+      if (moves[e.key]) {
+        const [dr, dc] = moves[e.key]
+        const nr = Math.max(0, Math.min(8, r + dr))
+        const nc = Math.max(0, Math.min(8, c + dc))
+        setGs(g => ({ ...g, selected: [nr, nc] }))
+        e.preventDefault()
+      }
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [gs.completed, handleNumber, handleErase])
+  }, [gs.selected, gs.completed, gs.noteMode])
 
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // DERIVED
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   const conflicts = useMemo(() => getConflicts(gs.board), [gs.board])
   const counts = useMemo(() => digitCounts(gs.board), [gs.board])
   const diff = DIFFICULTIES[gs.difficulty]
   const hintsLeft = MAX_HINTS - gs.hintsUsed
 
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // UI
-  // ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{
-      maxWidth: 960,
-      margin: '0 auto',
-      padding: '24px 16px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center'
-    }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
+      <div style={{ width: '100%', maxWidth: 560, display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+        <span style={{ ...pillStyle(T, diff.color) }}>
+          {diff.emoji} {diff.label}
+        </span>
+
+        <div style={{ color: T.accentLight }}>
+          {formatTime(gs.timer)}
+        </div>
+      </div>
 
       <SudokuBoard
         board={gs.board}
@@ -268,16 +309,10 @@ export default function GamePage({
         solution={gs.solution}
         notes={gs.notes}
         selected={gs.selected}
-        hintInfo={gs.hintInfo}
         conflicts={conflicts}
         T={T}
         onCellClick={handleCellClick}
       />
-
-      <div style={{ marginTop: 20 }}>
-        <button onClick={handleErase}>Erase</button>
-        <button onClick={handleHint}>Hint</button>
-      </div>
 
       {showVictory && (
         <VictoryModal
@@ -291,6 +326,7 @@ export default function GamePage({
           }}
         />
       )}
+
     </div>
   )
 }
