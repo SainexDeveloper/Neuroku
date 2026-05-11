@@ -103,7 +103,7 @@ export default function Nav({
     const base = [...NAV_LINKS]
 
     if (user) {
-      base.push({ id: 'stats', label: 'Stats', icon: '📊' })
+      base.push({ id: 'profile', label: 'Profile', icon: '👤' })
     }
 
     return base
@@ -185,7 +185,7 @@ export default function Nav({
                   cursor: 'pointer',
                 }}
               >
-                👤 {user.username}
+                👤 {user.user_metadata?.username || 'Profile'}
               </button>
 
               <button
@@ -303,7 +303,7 @@ export default function Nav({
                   onClick={() => setPage('profile')}
                   style={navLinkStyle('profile')}
                 >
-                  👤 {user.username}
+                  👤 {user.user_metadata?.username || 'Profile'}
                 </button>
 
                 <button

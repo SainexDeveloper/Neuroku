@@ -3,7 +3,6 @@ import Nav from './components/Nav.jsx'
 import HomePage from './pages/HomePage.jsx'
 import GamePage from './pages/GamePage.jsx'
 import DailyPage from './pages/DailyPage.jsx'
-import StatsPage from './pages/StatsPage.jsx'
 import AuthModal from './components/AuthModal.jsx'
 import { useRequireAuth } from './components/useRequireAuth.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
@@ -250,10 +249,6 @@ export default function App() {
             />
           )}
 
-          {page === 'stats' && (
-            <StatsPage T={T} stats={stats} />
-          )}
-
           {page === 'leaderboard' && (
             <LeaderboardPage T={T} />
           )}
@@ -265,9 +260,13 @@ export default function App() {
             />
           )}
 
-          {user && (
-  <ProfilePage user={user} profile={profile} T={T} />
-)}
+          {page === 'profile' && (
+            <ProfilePage
+              T={T}
+              stats={stats}
+              onOpenAuth={() => setShowAuth(true)}
+            />
+          )}
 
           <footer style={{
             marginTop: 70,
