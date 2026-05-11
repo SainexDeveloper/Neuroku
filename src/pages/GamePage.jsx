@@ -4,12 +4,16 @@ import VictoryModal from '../components/VictoryModal.jsx'
 import { getConflicts, isSolved, digitCounts, formatTime, cloneBoard, clearRelatedNotes } from '../lib/sudoku.js'
 import { generateHint, HINT_LABELS, MAX_HINTS } from '../lib/hint.js'
 import { buttonStyle, pillStyle, DIFFICULTIES } from '../styles/theme.js'
+import { updateStatsOnWin } from '../lib/storage.js'
+import { loadStats } from '../lib/storage.js'
+import { supabase } from '../lib/supabase.js'
 import { saveGameState } from "../lib/storage.js"
 
 // ─── GamePage ────────────────────────────────────────────────────────────────
 
-export default function GamePage({ gs, setGs, T, showVictory, setShowVictory, stats, startGame, notify }) {
+export default function GamePage({ gs, setGs, T, showVictory, setShowVictory, stats, startGame, notify, setStats }) {
   const timerRef = useRef(null)
+  
 
   // ── Timer ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -54,9 +58,20 @@ export default function GamePage({ gs, setGs, T, showVictory, setShowVictory, st
 
       if (completed) {
         clearInterval(timerRef.current)
-
-        setTimeout(() => {
+      
+        setTimeout(async () => {
           setShowVictory(true)
+      
+          // 🔥 ОБНОВЛЕНИЕ СТАТИСТИКИ
+          const payload = {
+            time: g.timer,
+            mistakes: g.errors,
+            difficulty: g.difficulty,
+          }
+      
+          const newStats = await updateStatsOnWin(stats, payload, g.userId)
+          setStats(newStats)
+    
         }, 400)
       }
 
