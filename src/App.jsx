@@ -247,10 +247,11 @@ export default function App() {
         {/* ── Page content ─────────────────────────────────────────────── */}
         <main style={{ paddingTop: 64 }}>
 
-          {page === 'home' && (
-            <HomePage T={T} startGame={startGame} startDaily={startDaily} />
-          )}
+        {page === 'home' && (
+          <HomePage T={T} startGame={startGame} startDaily={startDaily} />
+        )}
 
+        {page === 'play' && gameState && (
           <GamePage
             gs={gameState}
             setGs={setGameState}
@@ -262,30 +263,31 @@ export default function App() {
             startGame={startGame}
             notify={notify}
           />
+        )}
 
-          {page === 'play' && !gameState && (
-            <DifficultyPicker T={T} startGame={startGame} />
-          )}
+        {page === 'play' && !gameState && (
+          <DifficultyPicker T={T} startGame={startGame} />
+        )}
 
-          {page === 'daily' && (
-            dailyState ? (
-              <DailyPage
-                T={T}
-                gs={dailyState}
-                setGs={setDailyState}
-                notify={notify}
-                onComplete={handleDailyComplete}
-              />
-            ) : (
-              <div style={{
-                padding: 40,
-                textAlign: 'center',
-                color: T.textMuted
-              }}>
-                Loading daily challenge...
-              </div>
-            )
-          )}
+        {page === 'daily' && (
+          dailyState ? (
+            <DailyPage
+              T={T}
+              gs={dailyState}
+              setGs={setDailyState}
+              notify={notify}
+              onComplete={handleDailyComplete}
+            />
+          ) : (
+            <div style={{
+              padding: 40,
+              textAlign: 'center',
+              color: T.textMuted
+            }}>
+              Loading daily challenge...
+            </div>
+          )
+        )}
 
           {page === 'leaderboard' && (
             <LeaderboardPage T={T} />
