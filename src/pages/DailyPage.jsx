@@ -21,45 +21,55 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
   }, [gs?.completed])
 
   useEffect(() => {
-    if (gs && !gs.completed) {
+    if (!gs || gs.completed) return
+  
+    const t = setTimeout(() => {
       saveDailyState(gs)
-    }
+    }, 300)
+  
+    return () => clearTimeout(t)
   }, [gs])
 
   const handleCellClick = (r, c) => setGs(g => ({ ...g, selected: [r, c] }))
 
   const handleNumber = (num) => {
     setGs(g => {
-      if (!g?.selected || !g?.board || !g?.solution) return g
+      if (!g) return g
+      if (!g.selected) return g
   
       const [r, c] = g.selected
   
-      if (!g.puzzle?.[r]?.[c]) {
-        const board = cloneBoard(g.board)
-        board[r][c] = board[r][c] === num ? 0 : num
+      if (!g.board || !g.solution || !g.puzzle) return g
   
-        const notes = clearRelatedNotes(g.notes, r, c, num)
+      // нельзя менять фиксированные клетки
+      if (g.puzzle[r]?.[c]) return g
   
-        let errors = g.errors ?? 0
-        if (num && g.solution?.[r]?.[c] !== num) errors++
+      const board = cloneBoard(g.board)
+      board[r][c] = board[r][c] === num ? 0 : num
   
-        const completed = isSolved(board, g.solution)
+      const notes = clearRelatedNotes(g.notes, r, c, num)
   
-        if (completed) clearInterval(timerRef.current)
-  
-        const next = {
-          ...g,
-          board,
-          notes,
-          errors,
-          completed
-        }
-  
-        saveDailyState(next) // 🔥 ВАЖНО
-        return next
+      let errors = g.errors || 0
+      if (num && g.solution?.[r]?.[c] !== num) {
+        errors++
       }
   
-      return g
+      const completed = isSolved(board, g.solution)
+  
+      if (completed && timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+  
+      const next = {
+        ...g,
+        board,
+        notes,
+        errors,
+        completed
+      }
+  
+      saveDailyState(next)
+      return next
     })
   }
 
@@ -82,7 +92,10 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
     onComplete?.()
   }, [gs?.completed, onComplete])
 
-  const conflicts = useMemo(() => gs ? getConflicts(gs.board) : new Set(), [gs?.board])
+  const conflicts = useMemo(() => {
+    if (!gs?.board) return new Set()
+    return getConflicts(gs.board)
+  }, [gs?.board])
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
