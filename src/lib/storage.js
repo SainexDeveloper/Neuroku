@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { calculateRating } from './rating.js'
 
 // ─────────────────────────────────────────────
 // KEYS (local fallback)
@@ -184,10 +185,86 @@ export function calculateStatsOnWin(stats, payload) {
 // SAFE WRAPPER (IMPORTANT FIX)
 // ─────────────────────────────────────────────
 
-export async function updateStatsOnWin(stats, payload, userId) {
-  const updated = calculateStatsOnWin(stats, payload)
+export async function updateUserStatsOnWin(userId, payload) {
 
-  await saveStats(updated, userId)
+  if (!userId) return
+
+  const { data } = await supabase
+
+    .from('user_stats')
+
+    .select('*')
+
+    .eq('user_id', userId)
+
+    .single()
+
+  const s = data || {}
+
+  const updated = {
+
+    user_id: userId,
+
+    games_played: (s.games_played ?? 0) + 1,
+
+    games_won: (s.games_won ?? 0) + 1,
+
+    total_time: (s.total_time ?? 0) + payload.time,
+
+    best_time: s.best_time
+
+      ? Math.min(s.best_time, payload.time)
+
+      : payload.time,
+
+    total_mistakes: (s.total_mistakes ?? 0) + payload.mistakes,
+
+    current_streak:
+
+      payload.isStreak
+
+        ? (s.current_streak ?? 0) + 1
+
+        : 1,
+
+    longest_streak: Math.max(
+
+      s.longest_streak ?? 0,
+
+      (s.current_streak ?? 0) + 1
+
+    ),
+
+    last_played_date: new Date()
+
+      .toISOString()
+
+      .slice(0, 10),
+
+    rating: calculateRating({
+
+      games_played: (s.games_played ?? 0) + 1,
+
+      games_won: (s.games_won ?? 0) + 1,
+
+      best_time: payload.time,
+
+      longest_streak: s.longest_streak ?? 0,
+
+    }),
+
+  }
+
+  const { error } = await supabase
+
+    .from('user_stats')
+
+    .upsert(updated)
+
+  if (error) console.error(error)
 
   return updated
+
 }
+
+export { updateUserStatsOnWin as updateStatsOnWin }

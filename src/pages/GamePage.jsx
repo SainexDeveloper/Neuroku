@@ -4,7 +4,7 @@ import VictoryModal from '../components/VictoryModal.jsx'
 import { getConflicts, isSolved, digitCounts, formatTime, cloneBoard, clearRelatedNotes } from '../lib/sudoku.js'
 import { generateHint, HINT_LABELS, MAX_HINTS } from '../lib/hint.js'
 import { buttonStyle, pillStyle, DIFFICULTIES } from '../styles/theme.js'
-import { updateStatsOnWin } from '../lib/storage.js'
+import { updateUserStatsOnWin } from '../lib/storage.js'
 import { supabase } from '../lib/supabase.js'
 import { saveGameState } from "../lib/storage.js"
 
@@ -67,7 +67,7 @@ export default function GamePage({ gs, setGs, T, showVictory, setShowVictory, st
             difficulty: g.difficulty,
           }
       
-          const newStats = await updateStatsOnWin(
+          const newStats = await updateUserStatsOnWin(
             stats,
             payload,
             g?.userId ?? null

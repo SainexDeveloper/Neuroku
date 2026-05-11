@@ -18,7 +18,7 @@ import {
   loadDailyState,
   saveDailyState,
   loadStats,
-  updateStatsOnWin,
+  updateUserStatsOnWin,
 } from './lib/storage.js'
 import { supabase } from './lib/supabase.js'
 
