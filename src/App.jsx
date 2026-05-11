@@ -141,6 +141,7 @@ export default function App() {
     return () => clearTimeout(t)
   }, [notification?.id])
 
+
   // ── Start a new free game ──────────────────────────────────────────────────
   const startGame = useCallback((difficulty) => {
     requireAuth(() => {
@@ -153,6 +154,24 @@ export default function App() {
   }, [requireAuth])
 
   // ── Start daily challenge ──────────────────────────────────────────────────
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const saved = loadDailyState(today)
+  
+    if (saved) {
+      setDailyState(saved)
+    } else {
+      const { puzzle, solution, difficulty } = getDailyPuzzle()
+  
+      const gs = {
+        ...makeGameState(puzzle, solution, difficulty),
+        date: today
+      }
+  
+      saveDailyState(gs)
+      setDailyState(gs)
+    }
+  }, [])
   const startDaily = useCallback(() => {
     requireAuth(() => {
       const today = new Date().toISOString().slice(0, 10)
