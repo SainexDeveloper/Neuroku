@@ -78,7 +78,6 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
   }
 
   const diff = DIFFICULTIES[gs.difficulty]
-  const safeEntries = Array.isArray(entries) ? entries : []
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '28px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -168,7 +167,7 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
         <h3 style={{ fontSize: 22, fontWeight: 700, marginBottom: 18, fontFamily: 'Outfit, sans-serif', color: T.text }}>
           Today's Rankings
         </h3>
-        <LeaderboardList T={T} entries={safeEntries} />
+        <LeaderboardList T={T} entries={[]} />
       </div>
     </div>
   )
