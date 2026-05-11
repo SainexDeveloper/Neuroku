@@ -29,6 +29,15 @@ export const DEFAULT_STATS = {
   },
 }
 
+function safeParse(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+
 // ─────────────────────────────────────────────
 // GAME STATE (local only)
 // ─────────────────────────────────────────────
@@ -38,8 +47,9 @@ export function saveGameState(state) {
 }
 
 export function loadGameState() {
-  const raw = localStorage.getItem(GAME_KEY)
-  return raw ? JSON.parse(raw) : null
+
+  return safeParse(GAME_KEY, null)
+
 }
 
 export function clearGameState() {
@@ -55,11 +65,11 @@ export function saveDailyState(state) {
 }
 
 export function loadDailyState(date) {
-  const raw = localStorage.getItem(DAILY_KEY)
-  if (!raw) return null
 
-  const state = JSON.parse(raw)
+  const state = safeParse(DAILY_KEY, null)
+
   return state?.date === date ? state : null
+
 }
 
 // ─────────────────────────────────────────────
@@ -67,8 +77,9 @@ export function loadDailyState(date) {
 // ─────────────────────────────────────────────
 
 export function loadLocalStats() {
-  const raw = localStorage.getItem(STATS_KEY)
-  return raw ? JSON.parse(raw) : DEFAULT_STATS
+
+  return safeParse(STATS_KEY, DEFAULT_STATS)
+
 }
 
 export function saveLocalStats(stats) {
@@ -82,6 +93,8 @@ export function saveLocalStats(stats) {
 export async function loadStats(userId) {
   if (!userId) return loadLocalStats()
 
+  const local = loadLocalStats()
+
   const { data, error } = await supabase
     .from('profiles')
     .select('stats')
@@ -89,11 +102,12 @@ export async function loadStats(userId) {
     .single()
 
   if (error || !data?.stats) {
-    return DEFAULT_STATS
+    return local || DEFAULT_STATS
   }
 
   return {
     ...DEFAULT_STATS,
+    ...local,
     ...data.stats,
   }
 }

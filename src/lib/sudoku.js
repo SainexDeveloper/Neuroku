@@ -3,11 +3,12 @@
 
 // Shuffle an array in place (Fisher-Yates) and return it
 export function shuffleArray(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    ;[a[i], a[j]] = [a[j], a[i]]
   }
-  return arr
+  return a
 }
 
 // ─── Base solved grid (canonical) ────────────────────────────────────────────
@@ -79,44 +80,68 @@ export function getDailyPuzzle() {
 export function getConflicts(board) {
   const conflicts = new Set()
 
+  const checkBox = (r, c, v, selfR, selfC) => {
+    const br = Math.floor(r / 3) * 3
+    const bc = Math.floor(c / 3) * 3
+
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        const rr = br + i
+        const cc = bc + j
+
+        if ((rr !== selfR || cc !== selfC) && board[rr][cc] === v) {
+          conflicts.add(`${selfR},${selfC}`)
+          conflicts.add(`${rr},${cc}`)
+        }
+      }
+    }
+  }
+
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const v = board[r][c]
       if (!v) continue
 
       for (let i = 0; i < 9; i++) {
-        // Row conflict
+        // row
         if (i !== c && board[r][i] === v) {
           conflicts.add(`${r},${c}`)
           conflicts.add(`${r},${i}`)
         }
-        // Column conflict
+
+        // col
         if (i !== r && board[i][c] === v) {
           conflicts.add(`${r},${c}`)
           conflicts.add(`${i},${c}`)
         }
-        // Box conflict
-        const br = 3 * Math.floor(r / 3) + Math.floor(i / 3)
-        const bc = 3 * Math.floor(c / 3) + (i % 3)
-        if ((br !== r || bc !== c) && board[br][bc] === v) {
-          conflicts.add(`${r},${c}`)
-          conflicts.add(`${br},${bc}`)
-        }
       }
+
+      checkBox(r, c, v, r, c)
     }
   }
+
   return conflicts
 }
 
-// Check if a number is legal to place (ignores the cell itself)
 export function isLegal(board, row, col, num) {
   for (let i = 0; i < 9; i++) {
     if (i !== col && board[row][i] === num) return false
     if (i !== row && board[i][col] === num) return false
-    const br = 3 * Math.floor(row / 3) + Math.floor(i / 3)
-    const bc = 3 * Math.floor(col / 3) + (i % 3)
-    if ((br !== row || bc !== col) && board[br][bc] === num) return false
   }
+
+  const br = Math.floor(row / 3) * 3
+  const bc = Math.floor(col / 3) * 3
+
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      const rr = br + i
+      const cc = bc + j
+      if ((rr !== row || cc !== col) && board[rr][cc] === num) {
+        return false
+      }
+    }
+  }
+
   return true
 }
 
