@@ -106,7 +106,7 @@ export default function App() {
   const [showVictory, setShowVictory] = useState(false)
 
   // ── Stats ──────────────────────────────────────────────────────────────────
-  const [stats, setStats] = useState(() => loadStats())
+  const [stats, setStats] = useState(() => loadStats(user?.id))
 
   // ── Notification queue ─────────────────────────────────────────────────────
   const [notification, setNotification] = useState(null)
@@ -153,15 +153,27 @@ export default function App() {
     })
   }, [requireAuth, dailyState])
 
-  const handleDailyComplete = useCallback(() => {
-    setStats(s => {
-      const updated = updateStatsOnWin(s, {
-        time: dailyState?.timer ?? 0,
-        mistakes: dailyState?.errors ?? 0,
-        difficulty: dailyState?.difficulty ?? 'medium',
-      })
+  const handleDailyComplete = useCallback(async () => {
+    setStats(prev => {
+      const updated = {
+        ...prev,
+        gamesPlayed: prev.gamesPlayed + 1,
+        wins: prev.wins + 1,
+        mistakes: prev.mistakes + (dailyState?.errors ?? 0),
+        totalTime: prev.totalTime + (dailyState?.timer ?? 0),
+        byDifficulty: {
+          ...prev.byDifficulty,
+          [dailyState?.difficulty ?? 'medium']:
+            (prev.byDifficulty?.[dailyState?.difficulty ?? 'medium'] ?? 0) + 1,
+        }
+      }
+  
+      // async sync отдельно (ВАЖНО)
+      syncStats(updated)
+  
       return updated
     })
+  
     notify('Daily challenge complete! 🎉', 'success')
   }, [dailyState, notify])
 

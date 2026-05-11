@@ -1,8 +1,15 @@
+// src/lib/storage.js
+
+import { supabase } from './supabase.js'
+
 const GAME_KEY = 'neuroku_game_state'
 const DAILY_KEY = 'neuroku_daily_state'
 const STATS_KEY = 'neuroku_stats'
 
-// ─── Game state ─────────────────────────────
+// ─────────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────────
+
 export function saveGameState(state) {
   localStorage.setItem(GAME_KEY, JSON.stringify(state))
 }
@@ -16,65 +23,157 @@ export function clearGameState() {
   localStorage.removeItem(GAME_KEY)
 }
 
-// ─── Daily ──────────────────────────────────
+// ─────────────────────────────────────────────
+// DAILY
+// ─────────────────────────────────────────────
+
 export function saveDailyState(state) {
   localStorage.setItem(DAILY_KEY, JSON.stringify(state))
 }
 
 export function loadDailyState(date) {
   const raw = localStorage.getItem(DAILY_KEY)
+
   if (!raw) return null
 
   const state = JSON.parse(raw)
+
   return state?.date === date ? state : null
 }
 
-// ─── Stats ──────────────────────────────────
-export function loadStats() {
-  const raw = localStorage.getItem(STATS_KEY)
-  return raw ? JSON.parse(raw) : {
-    gamesPlayed: 0,
-    wins: 0,
-    bestTime: null,
-    totalTime: 0,
-    streak: 0,
-    longestStreak: 0,
-    mistakes: 0,
-    lastPlayedDate: null,
-    byDifficulty: { easy: 0, medium: 0, hard: 0, expert: 0 },
-  }
+// ─────────────────────────────────────────────
+// DEFAULT STATS
+// ─────────────────────────────────────────────
+
+export const DEFAULT_STATS = {
+  gamesPlayed: 0,
+  wins: 0,
+  bestTime: null,
+  totalTime: 0,
+  streak: 0,
+  longestStreak: 0,
+  mistakes: 0,
+  lastPlayedDate: null,
+  byDifficulty: {
+    easy: 0,
+    medium: 0,
+    hard: 0,
+    expert: 0,
+  },
 }
 
-export function saveStats(stats) {
+// ─────────────────────────────────────────────
+// LOCAL STATS
+// ─────────────────────────────────────────────
+
+export function loadLocalStats() {
+  const raw = localStorage.getItem(STATS_KEY)
+
+  return raw
+    ? JSON.parse(raw)
+    : DEFAULT_STATS
+}
+
+export function saveLocalStats(stats) {
   localStorage.setItem(STATS_KEY, JSON.stringify(stats))
 }
 
-export function updateStatsOnWin(stats, payload) {
+// ─────────────────────────────────────────────
+// CLOUD STATS
+// ─────────────────────────────────────────────
+
+export async function loadStats(userId = null) {
+  // guest mode
+  if (!userId) {
+    return loadLocalStats()
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('stats')
+    .eq('id', userId)
+    .single()
+
+  if (error || !data?.stats) {
+    return DEFAULT_STATS
+  }
+
+  return {
+    ...DEFAULT_STATS,
+    ...data.stats,
+  }
+}
+
+export async function saveStats(stats, userId = null) {
+  // guest mode
+  if (!userId) {
+    saveLocalStats(stats)
+    return
+  }
+
+  await supabase
+    .from('profiles')
+    .update({
+      stats,
+    })
+    .eq('id', userId)
+
+  // optional local backup
+  saveLocalStats(stats)
+}
+
+// ─────────────────────────────────────────────
+// UPDATE ON WIN
+// ─────────────────────────────────────────────
+
+export async function updateStatsOnWin(stats, payload, userId = null) {
   const today = new Date().toISOString().slice(0, 10)
+
+  const yesterday = new Date(Date.now() - 86400000)
+    .toISOString()
+    .slice(0, 10)
 
   const streak =
     stats.lastPlayedDate === today
       ? stats.streak
-      : stats.lastPlayedDate === new Date(Date.now() - 86400000).toISOString().slice(0,10)
+      : stats.lastPlayedDate === yesterday
         ? stats.streak + 1
         : 1
 
   const updated = {
     ...stats,
+
     gamesPlayed: stats.gamesPlayed + 1,
+
     wins: stats.wins + 1,
-    bestTime: stats.bestTime === null ? payload.time : Math.min(stats.bestTime, payload.time),
-    totalTime: stats.totalTime + payload.time,
-    mistakes: stats.mistakes + payload.mistakes,
+
+    bestTime:
+      stats.bestTime === null
+        ? payload.time
+        : Math.min(stats.bestTime, payload.time),
+
+    totalTime:
+      stats.totalTime + payload.time,
+
+    mistakes:
+      stats.mistakes + payload.mistakes,
+
     streak,
-    longestStreak: Math.max(stats.longestStreak, streak),
+
+    longestStreak:
+      Math.max(stats.longestStreak, streak),
+
     lastPlayedDate: today,
+
     byDifficulty: {
       ...stats.byDifficulty,
-      [payload.difficulty]: (stats.byDifficulty[payload.difficulty] ?? 0) + 1,
-    }
+
+      [payload.difficulty]:
+        (stats.byDifficulty?.[payload.difficulty] ?? 0) + 1,
+    },
   }
 
-  saveStats(updated)
+  await saveStats(updated, userId)
+
   return updated
-} 
+}
