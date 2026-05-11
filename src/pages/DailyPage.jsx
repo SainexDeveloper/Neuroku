@@ -14,33 +14,52 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
     timerRef.current = setInterval(() => {
       setGs(g => {
         const next = { ...g, timer: g.timer + 1 }
-        saveDailyState(next)
         return next
       })
     }, 1000)
     return () => clearInterval(timerRef.current)
   }, [gs?.completed])
 
+  useEffect(() => {
+    if (gs && !gs.completed) {
+      saveDailyState(gs)
+    }
+  }, [gs])
+
   const handleCellClick = (r, c) => setGs(g => ({ ...g, selected: [r, c] }))
 
   const handleNumber = (num) => {
     setGs(g => {
-      if (!g.selected || g.completed) return g
+      if (!g?.selected || !g?.board || !g?.solution) return g
+  
       const [r, c] = g.selected
-      if (g.puzzle[r][c]) return g
-      if (g.noteMode) {
-        const notes = g.notes.map(row => row.map(s => new Set(s)))
-        notes[r][c].has(num) ? notes[r][c].delete(num) : notes[r][c].add(num)
-        return { ...g, notes }
+  
+      if (!g.puzzle?.[r]?.[c]) {
+        const board = cloneBoard(g.board)
+        board[r][c] = board[r][c] === num ? 0 : num
+  
+        const notes = clearRelatedNotes(g.notes, r, c, num)
+  
+        let errors = g.errors ?? 0
+        if (num && g.solution?.[r]?.[c] !== num) errors++
+  
+        const completed = isSolved(board, g.solution)
+  
+        if (completed) clearInterval(timerRef.current)
+  
+        const next = {
+          ...g,
+          board,
+          notes,
+          errors,
+          completed
+        }
+  
+        saveDailyState(next) // 🔥 ВАЖНО
+        return next
       }
-      const board = cloneBoard(g.board)
-      board[r][c] = board[r][c] === num ? 0 : num
-      const notes = clearRelatedNotes(g.notes, r, c, num)
-      let errors = g.errors
-      if (num && g.solution[r][c] !== num) errors++
-      const completed = isSolved(board, g.solution)
-      if (completed) { clearInterval(timerRef.current); }
-      return { ...g, board, notes, errors, completed }
+  
+      return g
     })
   }
 

@@ -184,8 +184,13 @@ export default function App() {
           date: today
         }
   
-        saveDailyState(gs)
-        setDailyState(gs)
+        const safeGs = {
+          ...makeGameState(puzzle, solution, difficulty),
+          date: today
+        }
+        
+        saveDailyState(safeGs)
+        setDailyState(safeGs)
   
         setTimeout(() => {
           setPage('daily')
