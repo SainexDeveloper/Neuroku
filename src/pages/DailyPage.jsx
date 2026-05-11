@@ -21,6 +21,16 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
   }, [gs?.completed])
 
   useEffect(() => {
+    if (!gs) return
+    if (gs.mode !== 'daily') return
+  
+    // защита от старого состояния
+    if (!Array.isArray(gs.board) || !Array.isArray(gs.notes)) {
+      setGs(null)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!gs || gs.completed) return
   
     const t = setTimeout(() => {
@@ -40,6 +50,8 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
       const [r, c] = g.selected
   
       if (!g.board || !g.solution || !g.puzzle) return g
+      if (!Array.isArray(g.board) || !Array.isArray(g.solution)) return g
+      if (!Array.isArray(g.board[0]) || !Array.isArray(g.solution[0])) return g
   
       // нельзя менять фиксированные клетки
       if (g.puzzle[r]?.[c]) return g
@@ -47,7 +59,9 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
       const board = cloneBoard(g.board)
       board[r][c] = board[r][c] === num ? 0 : num
   
-      const notes = clearRelatedNotes(g.notes, r, c, num)
+      const notes = g.notes
+      ? clearRelatedNotes(g.notes, r, c, num)
+      : createNotes()
   
       let errors = g.errors || 0
       if (num && g.solution?.[r]?.[c] !== num) {
@@ -110,6 +124,30 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
   }
 
   const diff = DIFFICULTIES[gs.difficulty]
+
+  if (!gs) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', color: T.textMuted }}>
+        Loading daily challenge...
+      </div>
+    )
+  }
+  
+  if (!Array.isArray(gs?.board) || !Array.isArray(gs?.board[0])) {
+    return (
+      <div style={{ color: 'red', padding: 20 }}>
+        Broken board structure
+      </div>
+    )
+  }
+
+  if (!gs?.board || !Array.isArray(gs.board)) {
+    return (
+      <div style={{ color: 'red' }}>
+        Invalid game state (board missing)
+      </div>
+    )
+  }
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '28px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

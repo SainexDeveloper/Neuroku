@@ -7,7 +7,7 @@ import AuthModal from './components/AuthModal.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 import LeaderboardPage from './pages/LeaderboardPage.jsx'
-import { THEMES, UNLOCKABLE_THEMES } from './styles/theme.js'
+import { THEMES, UNLOCKABLE_THEMES, DIFFICULTIES } from './styles/theme.js'
 import './App.css'
 import { generateSudoku, getDailyPuzzle, createNotes } from './lib/sudoku.js'
 import {
@@ -143,6 +143,13 @@ export default function App() {
 
 
   // ── Start a new free game ──────────────────────────────────────────────────
+  useEffect(() => {
+    const saved = loadGameState()
+  
+    if (saved && !saved.completed) {
+      setGameState(saved)
+    }
+  }, [])
   const startGame = useCallback((difficulty) => {
     requireAuth(() => {
       const { puzzle, solution } = generateSudoku(difficulty)
@@ -154,6 +161,16 @@ export default function App() {
   }, [requireAuth])
 
   // ── Start daily challenge ──────────────────────────────────────────────────
+
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const saved = loadDailyState(today)
+  
+    if (saved) {
+      setDailyState(saved)
+    }
+  }, [])
+
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10)
     const saved = loadDailyState(today)
@@ -172,36 +189,28 @@ export default function App() {
       setDailyState(gs)
     }
   }, [])
+
   const startDaily = useCallback(() => {
-    requireAuth(() => {
-      const today = new Date().toISOString().slice(0, 10)
-  
-      if (!dailyState || dailyState.date !== today) {
-        const { puzzle, solution, difficulty } = getDailyPuzzle()
-  
-        const gs = {
-          ...makeGameState(puzzle, solution, difficulty),
-          date: today
-        }
-  
-        const safeGs = {
-          ...makeGameState(puzzle, solution, difficulty),
-          date: today
-        }
-        
-        saveDailyState(safeGs)
-        setDailyState(safeGs)
-  
-        setTimeout(() => {
-          setPage('daily')
-        }, 0)
-  
-        return
-      }
-  
-      setPage('daily')
-    })
-  }, [requireAuth, dailyState])
+  const today = new Date().toISOString().slice(0, 10)
+
+  const saved = loadDailyState(today)
+
+  if (saved) {
+    setDailyState(saved)
+  } else {
+    const { puzzle, solution, difficulty } = getDailyPuzzle()
+
+    const gs = {
+      ...makeGameState(puzzle, solution, difficulty),
+      date: today
+    }
+
+    saveDailyState(gs)
+    setDailyState(gs)
+  }
+
+  setPage('daily')
+}, [])
 
   const handleDailyComplete = useCallback(async () => {
 
@@ -232,6 +241,9 @@ export default function App() {
     notify('Daily challenge complete! 🎉', 'success')
   
   }, [dailyState, stats, notify, user?.id])
+
+  
+  
 
   // ── Scroll to top on page change ───────────────────────────────────────────
   useEffect(() => {
@@ -380,8 +392,6 @@ export default function App() {
 // ─── Difficulty picker (shown when navigating to /play with no active game) ───
 function DifficultyPicker({ T, startGame }) {
   // eslint-disable-next-line no-undef
-  const { DIFFICULTIES } = require('./styles/theme.js')
-
   return (
     <div style={{
       display:        'flex',

@@ -147,7 +147,16 @@ export function isLegal(board, row, col, num) {
 
 // Check if puzzle is fully and correctly solved
 export function isSolved(board, solution) {
-  return board.every((row, r) => row.every((v, c) => v === solution[r][c]))
+  if (!Array.isArray(board) || !Array.isArray(solution)) return false
+
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      if (board?.[r]?.[c] !== solution?.[r]?.[c]) {
+        return false
+      }
+    }
+  }
+  return true
 }
 
 // Count how many times a digit has been placed

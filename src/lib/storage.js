@@ -5,7 +5,7 @@ import { calculateRating } from './rating.js'
 // KEYS (local fallback)
 // ─────────────────────────────────────────────
 
-const GAME_KEY = 'neuroku_game_state'
+const PLAY_KEY = 'neuroku_play_state'
 const DAILY_KEY = 'neuroku_daily_state'
 const STATS_KEY = 'neuroku_stats'
 
@@ -44,17 +44,20 @@ function safeParse(key, fallback) {
 // ─────────────────────────────────────────────
 
 export function saveGameState(state) {
-  localStorage.setItem(GAME_KEY, JSON.stringify(state))
+  localStorage.setItem(PLAY_KEY, JSON.stringify(state))
 }
 
 export function loadGameState() {
-
-  return safeParse(GAME_KEY, null)
-
+  try {
+    const raw = localStorage.getItem(PLAY_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
 }
 
 export function clearGameState() {
-  localStorage.removeItem(GAME_KEY)
+  localStorage.removeItem(PLAY_KEY)
 }
 
 // ─────────────────────────────────────────────
