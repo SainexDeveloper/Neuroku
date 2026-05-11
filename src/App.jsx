@@ -4,7 +4,6 @@ import HomePage from './pages/HomePage.jsx'
 import GamePage from './pages/GamePage.jsx'
 import DailyPage from './pages/DailyPage.jsx'
 import AuthModal from './components/AuthModal.jsx'
-import { useRequireAuth } from './components/useRequireAuth.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 import LeaderboardPage from './pages/LeaderboardPage.jsx'
@@ -17,7 +16,8 @@ import {
   clearGameState,
   loadDailyState,
   saveDailyState,
-  loadStats
+  loadStats,
+  updateStatsOnWin
 } from "./lib/storage.js"
 import { supabase } from './lib/supabase.js'
 
@@ -108,12 +108,24 @@ export default function App() {
   })
   const [showVictory, setShowVictory] = useState(false)
 
+  useEffect(() => {
+    if (gameState) {
+      saveGameState(gameState)
+    }
+  }, [gameState])
+
   // ── Stats ──────────────────────────────────────────────────────────────────
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
     if (!user?.id) return
-    setStats(loadStats(user.id))
+
+    const load = async () => {
+      const s = await loadStats(user.id)
+      setStats(s)
+    }
+
+    load()
   }, [user?.id])
 
   // ── Notification queue ─────────────────────────────────────────────────────
@@ -153,37 +165,49 @@ export default function App() {
           date: today
         }
   
-        setDailyState(gs)
         saveDailyState(gs)
+        setDailyState(gs)
+  
+        setTimeout(() => {
+          setPage('daily')
+        }, 0)
+  
+        return
       }
   
       setPage('daily')
     })
   }, [requireAuth, dailyState])
 
-  const handleDailyComplete = useCallback(() => {
-    setStats(prev => {
-      const updated = {
-        ...prev,
-        gamesPlayed: (prev.gamesPlayed ?? 0) + 1,
-        wins: (prev.wins ?? 0) + 1,
-        mistakes: (prev.mistakes ?? 0) + (dailyState?.errors ?? 0),
-        totalTime: (prev.totalTime ?? 0) + (dailyState?.timer ?? 0),
-        byDifficulty: {
-          ...prev.byDifficulty,
-          [dailyState?.difficulty ?? 'medium']:
-            (prev.byDifficulty?.[dailyState?.difficulty ?? 'medium'] ?? 0) + 1,
-        }
+  const handleDailyComplete = useCallback(async () => {
+
+    if (!dailyState) return
+  
+    const updatedStats = {
+      ...(stats || {}),
+      gamesPlayed: (stats?.gamesPlayed ?? 0) + 1,
+      wins: (stats?.wins ?? 0) + 1,
+      mistakes: (stats?.mistakes ?? 0) + dailyState.errors,
+      totalTime: (stats?.totalTime ?? 0) + dailyState.timer,
+      byDifficulty: {
+        ...(stats?.byDifficulty || {}),
+        [dailyState.difficulty]:
+          ((stats?.byDifficulty?.[dailyState.difficulty]) ?? 0) + 1,
       }
+    }
   
-      // 🔥 async ВНЕ setState
-      updateStatsOnWin(updated, user?.id)
+    setStats(updatedStats)
   
-      return updated
+    await updateStatsOnWin(user?.id, {
+      time: dailyState.timer,
+      mistakes: dailyState.errors,
+      difficulty: dailyState.difficulty,
+      isStreak: true
     })
   
     notify('Daily challenge complete! 🎉', 'success')
-  }, [dailyState, notify, user?.id])
+  
+  }, [dailyState, stats, notify, user?.id])
 
   // ── Scroll to top on page change ───────────────────────────────────────────
   useEffect(() => {
