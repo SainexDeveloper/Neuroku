@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { LeaderboardList } from './DailyPage.jsx'
 import { formatTime } from '../lib/sudoku.js'
 import { fetchLeaderboard } from '../lib/storage.js'
+import { supabase } from '../lib/supabase.js'
 
 const TABS = [
   { id: 'daily',  label: '📅 Daily'  },
