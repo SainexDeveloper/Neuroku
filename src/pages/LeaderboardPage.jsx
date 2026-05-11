@@ -41,25 +41,40 @@ export default function LeaderboardPage({ T }) {
     let active = true
     setLoading(true)
   
-    fetchLeaderboardZG(tab).then(data => {
-      if (!active) return
-      setEntries(Array.isArray(data) ? data : [])
-      setLoading(false)
-    })
+    const load = async () => {
+      try {
+        // 1. MAIN: DB
+        const dbData = await fetchLeaderboard(tab)
   
-    return () => { active = false }
-  }, [tab])
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-
-    fetchLeaderboard(tab).then(data => {
-      if (!active) return
-      setEntries(data || [])
-      setLoading(false)
-    })
-
+        if (!active) return
+  
+        if (Array.isArray(dbData) && dbData.length > 0) {
+          setEntries(dbData)
+          setLoading(false)
+          return
+        }
+  
+        // 2. FALLBACK: MOCK
+        const mockData = await fetchLeaderboardZG(tab)
+  
+        if (!active) return
+  
+        setEntries(Array.isArray(mockData) ? mockData : [])
+      } catch (e) {
+        console.warn('DB failed → fallback mock', e)
+  
+        const mockData = await fetchLeaderboardZG(tab)
+  
+        if (!active) return
+  
+        setEntries(Array.isArray(mockData) ? mockData : [])
+      } finally {
+        setLoading(false)
+      }
+    }
+  
+    load()
+  
     return () => { active = false }
   }, [tab])
   
