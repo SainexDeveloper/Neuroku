@@ -50,6 +50,25 @@ export function createPuzzle(solution, removals) {
   return puzzle
 }
 
+
+// ─── Game State Factory ───────────────────────────────────────────────────────
+export function makeGameState(puzzle, solution, difficulty) {
+  return {
+    board: puzzle.map(row => [...row]),
+    puzzle,
+    solution,
+    difficulty,
+
+    timer: 0,
+    errors: 0,
+    completed: false,
+
+    selected: null,
+    noteMode: false,
+
+    notes: createNotes(),
+  }
+}
 // ─── Main generator ───────────────────────────────────────────────────────────
 import { DIFFICULTIES } from '../styles/theme.js'
 

@@ -10,12 +10,12 @@ import LeaderboardPage from './pages/LeaderboardPage.jsx'
 import { THEMES, UNLOCKABLE_THEMES, DIFFICULTIES } from './styles/theme.js'
 import './App.css'
 import { generateSudoku, getDailyPuzzle, createNotes } from './lib/sudoku.js'
+import { ensureDailyExists } from "./lib/daily.js"
 import {
   loadGameState,
   saveGameState,
-  clearGameState,
   loadDailyState,
-  saveDailyState,
+  clearGameState,
   loadStats,
   updateStatsOnWin
 } from "./lib/storage.js"
@@ -98,14 +98,7 @@ export default function App() {
     const saved = loadGameState()
     return saved && !saved.completed ? saved : null
   })
-  const [dailyState, setDailyState] = useState(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    const saved = loadDailyState(today)
-  
-    if (saved) return saved
-  
-    return null
-  })
+  const [dailyState, setDailyState] = useState(null)
   const [showVictory, setShowVictory] = useState(false)
 
   useEffect(() => {
@@ -161,46 +154,26 @@ export default function App() {
   }, [requireAuth])
 
   // ── Start daily challenge ──────────────────────────────────────────────────
-  useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    const saved = loadDailyState(today)
-  
-    if (saved) {
-      setDailyState(saved)
-    } else {
-      const { puzzle, solution, difficulty } = getDailyPuzzle()
-  
-      const gs = {
-        ...makeGameState(puzzle, solution, difficulty),
-        date: today
-      }
-  
-      saveDailyState(gs)
-      setDailyState(gs)
-    }
-  }, [])
-
   const startDaily = useCallback(() => {
-  const today = new Date().toISOString().slice(0, 10)
-
-  const saved = loadDailyState(today)
-
-  if (saved) {
-    setDailyState(saved)
-  } else {
-    const { puzzle, solution, difficulty } = getDailyPuzzle()
-
-    const gs = {
-      ...makeGameState(puzzle, solution, difficulty),
-      date: today
-    }
-
-    saveDailyState(gs)
-    setDailyState(gs)
-  }
-
-  setPage('daily')
-}, [])
+    requireAuth(async () => {
+      const daily = await ensureDailyExists()
+  
+      const today = new Date().toISOString().slice(0, 10)
+  
+      setDailyState({
+        ...daily,
+        date: today,
+        board: daily.puzzle.map(r => [...r]),
+        notes: createNotes(),
+        selected: null,
+        errors: 0,
+        timer: 0,
+        completed: false,
+      })
+  
+      setPage('daily')
+    })
+  }, [requireAuth])
 
   const handleDailyComplete = useCallback(async () => {
 
@@ -226,6 +199,14 @@ export default function App() {
       mistakes: dailyState.errors,
       difficulty: dailyState.difficulty,
       isStreak: true
+    })
+
+    await supabase.from('daily_results').upsert({
+      user_id: user.id,
+      date: dailyState.date,
+      time: dailyState.timer,
+      errors: dailyState.errors,
+      completed_at: new Date()
     })
   
     notify('Daily challenge complete! 🎉', 'success')

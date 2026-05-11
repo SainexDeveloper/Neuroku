@@ -115,7 +115,7 @@ export default function Nav({
     if (openAuth) openAuth()
   }
 
-  const toggleTheme = () => {
+  const toggleTheme = () => {юф
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
   }
 

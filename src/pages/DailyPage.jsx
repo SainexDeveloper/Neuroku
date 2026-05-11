@@ -1,30 +1,73 @@
 import { useEffect, useRef, useMemo } from 'react'
 import SudokuBoard from '../components/SudokuBoard.jsx'
-import { getConflicts, isSolved, formatTime, cloneBoard, clearRelatedNotes } from '../lib/sudoku.js'
+import { getConflicts, isSolved, formatTime, cloneBoard, clearRelatedNotes, createNotes, makeGameState } from '../lib/sudoku.js'
 import { buttonStyle, pillStyle, DIFFICULTIES } from '../styles/theme.js'
-import { saveDailyState } from "../lib/storage.js"
+import { supabase } from '../lib/supabase.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
 // ─── DailyPage ────────────────────────────────────────────────────────────────
 
 export default function DailyPage({ T, gs, setGs, onComplete }) {
   const timerRef = useRef(null)
+  const { user } = useAuth()
 
   useEffect(() => {
-    if (!gs || gs.completed) return
-    timerRef.current = setInterval(() => {
-      setGs(g => {
-        const next = { ...g, timer: g.timer + 1 }
-        return next
-      })
-    }, 1000)
-    return () => clearInterval(timerRef.current)
-  }, [gs?.completed])
+    if (!user) return
+  
+    const loadDaily = async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10)
+  
+        const { data, error } = await supabase
+          .from('daily_puzzles')
+          .select('*')
+          .eq('date', today)
+          .maybeSingle()
+  
+        if (error) throw error
+  
+        // если уже есть daily в базе
+        if (data) {
+          setGs({
+            ...makeGameState(data.puzzle, data.solution, data.difficulty),
+            date: today
+          })
+          return
+        }
+  
+        // если нет — создаём новый daily (fallback)
+        const { generateSudoku } = await import('../lib/sudoku.js')
+  
+        const difficulty = 'medium'
+        const { puzzle, solution } = generateSudoku(difficulty)
+  
+        const newDaily = {
+          date: today,
+          puzzle,
+          solution,
+          difficulty
+        }
+  
+        await supabase.from('daily_puzzles').insert(newDaily)
+  
+        setGs({
+          ...makeGameState(puzzle, solution, difficulty),
+          date: today
+        })
+  
+      } catch (e) {
+        console.error('Failed to load daily:', e)
+      }
+    }
+  
+    loadDaily()
+  }, [user])
 
   useEffect(() => {
     if (!gs || gs.completed) return
   
     const t = setTimeout(() => {
-      saveDailyState(gs)
+      
     }, 300)
   
     return () => clearTimeout(t)
@@ -72,7 +115,6 @@ export default function DailyPage({ T, gs, setGs, onComplete }) {
         completed
       }
   
-      saveDailyState(next)
       return next
     })
   }

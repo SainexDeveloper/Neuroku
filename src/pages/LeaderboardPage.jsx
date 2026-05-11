@@ -9,12 +9,20 @@ const TABS = [
   { id: 'global', label: '🌍 All-Time' },
 ]
 
-export default function LeaderboardPage({ T }) {
+export default async function LeaderboardPage({ T }) {
   const [tab, setTab] = useState('daily')
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
 
   const topThree = entries.slice(0, 3)
+  const today = new Date().toISOString().slice(0, 10)
+
+  const { data } = await supabase
+    .from('daily_results')
+    .select('*')
+    .eq('date', today)
+    .order('time', { ascending: true })
+    .limit(50)
 
   useEffect(() => {
     let active = true
@@ -28,6 +36,7 @@ export default function LeaderboardPage({ T }) {
 
     return () => { active = false }
   }, [tab])
+  
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px 64px' }}>
