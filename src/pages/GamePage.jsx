@@ -4,9 +4,7 @@ import VictoryModal from '../components/VictoryModal.jsx'
 import { getConflicts, isSolved, digitCounts, formatTime, cloneBoard, clearRelatedNotes } from '../lib/sudoku.js'
 import { generateHint, HINT_LABELS, MAX_HINTS } from '../lib/hint.js'
 import { buttonStyle, pillStyle, DIFFICULTIES } from '../styles/theme.js'
-import { updateUserStatsOnWin } from '../lib/storage.js'
-import { supabase } from '../lib/supabase.js'
-import { saveGameState } from "../lib/storage.js"
+import { updateUserStatsOnWin, saveGameState } from '../lib/storage.js'
 
 // ─── GamePage ────────────────────────────────────────────────────────────────
 
@@ -16,16 +14,19 @@ export default function GamePage({ gs, setGs, T, showVictory, setShowVictory, st
 
   // ── Timer ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (gs.completed) return
-    timerRef.current = setInterval(() => {
+    if (!gs || gs.completed) return
+  
+    const id = setInterval(() => {
       setGs(g => {
+        if (g.completed) return g
         const next = { ...g, timer: g.timer + 1 }
         saveGameState(next)
         return next
       })
     }, 1000)
-    return () => clearInterval(timerRef.current)
-  }, [gs.completed])
+  
+    return () => clearInterval(id)
+  }, [gs?.completed, setGs])
 
   // ── Cell click ─────────────────────────────────────────────────────────────
   const handleCellClick = useCallback((r, c) => {

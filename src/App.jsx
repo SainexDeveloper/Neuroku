@@ -17,8 +17,7 @@ import {
   clearGameState,
   loadDailyState,
   saveDailyState,
-  loadStats,
-  updateStatsOnWin
+  loadStats
 } from "./lib/storage.js"
 import { supabase } from './lib/supabase.js'
 
@@ -101,12 +100,21 @@ export default function App() {
   })
   const [dailyState, setDailyState] = useState(() => {
     const today = new Date().toISOString().slice(0, 10)
-    return loadDailyState(today)
+    const saved = loadDailyState(today)
+  
+    if (saved) return saved
+  
+    return null
   })
   const [showVictory, setShowVictory] = useState(false)
 
   // ── Stats ──────────────────────────────────────────────────────────────────
-  const [stats, setStats] = useState(() => loadStats(user?.id))
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    if (!user?.id) return
+    setStats(loadStats(user.id))
+  }, [user?.id])
 
   // ── Notification queue ─────────────────────────────────────────────────────
   const [notification, setNotification] = useState(null)
@@ -137,7 +145,7 @@ export default function App() {
     requireAuth(() => {
       const today = new Date().toISOString().slice(0, 10)
   
-      if (!dailyState) {
+      if (!dailyState || dailyState.date !== today) {
         const { puzzle, solution, difficulty } = getDailyPuzzle()
   
         const gs = {
@@ -153,14 +161,14 @@ export default function App() {
     })
   }, [requireAuth, dailyState])
 
-  const handleDailyComplete = useCallback(async () => {
+  const handleDailyComplete = useCallback(() => {
     setStats(prev => {
       const updated = {
         ...prev,
-        gamesPlayed: prev.gamesPlayed + 1,
-        wins: prev.wins + 1,
-        mistakes: prev.mistakes + (dailyState?.errors ?? 0),
-        totalTime: prev.totalTime + (dailyState?.timer ?? 0),
+        gamesPlayed: (prev.gamesPlayed ?? 0) + 1,
+        wins: (prev.wins ?? 0) + 1,
+        mistakes: (prev.mistakes ?? 0) + (dailyState?.errors ?? 0),
+        totalTime: (prev.totalTime ?? 0) + (dailyState?.timer ?? 0),
         byDifficulty: {
           ...prev.byDifficulty,
           [dailyState?.difficulty ?? 'medium']:
@@ -168,19 +176,28 @@ export default function App() {
         }
       }
   
-      // async sync отдельно (ВАЖНО)
-      syncStats(updated)
+      // 🔥 async ВНЕ setState
+      updateStatsOnWin(updated, user?.id)
   
       return updated
     })
   
     notify('Daily challenge complete! 🎉', 'success')
-  }, [dailyState, notify])
+  }, [dailyState, notify, user?.id])
 
   // ── Scroll to top on page change ───────────────────────────────────────────
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [page])
+
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+  
+    const saved = loadDailyState(today)
+    if (saved) {
+      setDailyState(saved)
+    }
+  }, [])
 
   // ── Scrollbar color sync ───────────────────────────────────────────────────
   useEffect(() => {
@@ -252,13 +269,19 @@ export default function App() {
           )}
 
           {page === 'daily' && (
-            <DailyPage
-              T={T}
-              gs={dailyState}
-              setGs={setDailyState}
-              notify={notify}
-              onComplete={handleDailyComplete}
-            />
+            dailyState ? (
+              <DailyPage
+                T={T}
+                gs={dailyState}
+                setGs={setDailyState}
+                notify={notify}
+                onComplete={handleDailyComplete}
+              />
+            ) : (
+              <div style={{ padding: 40, textAlign: 'center', color: T.textMuted }}>
+                Loading daily...
+              </div>
+            )
           )}
 
           {page === 'leaderboard' && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { LeaderboardList } from './DailyPage.jsx'
 import { formatTime } from '../lib/sudoku.js'
 import { fetchLeaderboard } from '../lib/storage.js'
@@ -14,25 +14,29 @@ export default function LeaderboardPage({ T }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const topThree = entries.slice(0, 3)
+
   useEffect(() => {
+    let active = true
     setLoading(true)
 
     fetchLeaderboard(tab).then(data => {
-      setEntries(data)
+      if (!active) return
+      setEntries(data || [])
       setLoading(false)
     })
-  }, [tab])
 
-  const topThree = useMemo(() => entries.slice(0, 3), [entries])
+    return () => { active = false }
+  }, [tab])
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px 64px' }}>
-      
+
       <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 6, fontFamily: 'Outfit, sans-serif', color: T.text }}>
         Leaderboard
       </h1>
 
-      <p style={{ color: T.textMuted, marginBottom: 28, fontSize: 16 }}>
+      <p style={{ color: T.textMuted, marginBottom: 28 }}>
         Top solvers from around the world.
       </p>
 
@@ -54,9 +58,7 @@ export default function LeaderboardPage({ T }) {
               flex: 1,
               padding: '10px 0',
               borderRadius: 10,
-              fontSize: 14,
               fontWeight: 600,
-              fontFamily: 'Outfit, sans-serif',
               background: tab === t.id ? T.accent : 'transparent',
               color: tab === t.id ? '#fff' : T.textMuted,
               border: 'none',
@@ -68,34 +70,21 @@ export default function LeaderboardPage({ T }) {
         ))}
       </div>
 
-      {/* Loading */}
+      {/* LOADING FIX */}
       {loading ? (
-        <div style={{ color: T.textMuted, marginBottom: 20 }}>
-          Loading leaderboard...
-        </div>
+        <div style={{ color: T.textMuted }}>Loading leaderboard...</div>
       ) : (
         <>
-          {/* Podium */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-end',
-            gap: 16,
-            marginBottom: 36,
-          }}>
+          {/* Podium SAFE */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 36 }}>
             <PodiumCard T={T} player={topThree[1]} place={2} height={100} />
             <PodiumCard T={T} player={topThree[0]} place={1} height={130} />
             <PodiumCard T={T} player={topThree[2]} place={3} height={80} />
           </div>
 
-          {/* List */}
-          <LeaderboardList T={T} entries={entries} highlightRank={null} />
+          <LeaderboardList T={T} entries={entries} />
         </>
       )}
-
-      <p style={{ textAlign: 'center', marginTop: 28, fontSize: 13, color: T.textFaint }}>
-        Rankings update in real-time. Daily rankings reset at midnight UTC.
-      </p>
     </div>
   )
 }
